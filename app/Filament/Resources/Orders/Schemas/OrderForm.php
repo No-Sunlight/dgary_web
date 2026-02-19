@@ -4,7 +4,10 @@ namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Models\Customer;
 use App\Models\Product;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -28,7 +31,7 @@ Wizard::make([
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
-                    ->required()
+                    //->required()
                     ->searchable()
                     ->options(function ():
                     array{
@@ -41,14 +44,29 @@ Wizard::make([
                         'Delivered' => 'Delivered',
                         'Confirmed' => 'Confirmed',
                     ])
-                    ->required(),//status
-                DatePicker::make('deliver_date')
-                    ->required(),
-                DatePicker::make('delivered_date'),
-                // TextInput::make('total')
-                //     ->required()
-                //     ->numeric(),
-                Toggle::make('discount')
+                    ,
+
+        //DateTimePicker            
+        DateTimePicker::make('deliver_date')
+            ->seconds(false)
+            //Pendiente agregar un limite para dias
+    //     ->native(false)
+    //     ->disabledDates(function () { 
+    //     $start = Carbon::now();
+    //     $end = $start->copy()->addDays(15);
+    //     $period = CarbonPeriod::create($start, $end);
+    //     $weekends = [];
+    //     foreach ($period as $date) {
+    //         if ($date->isWeekend()) {
+    //             $weekends[] = $date->format('Y-m-d');
+    //         }
+    //     }
+ 
+    //     return $weekends;
+    // })
+    , 
+
+        Toggle::make('discount')
                     ->required(),
         ]),
  //DETAILS OF THE PRODUCT

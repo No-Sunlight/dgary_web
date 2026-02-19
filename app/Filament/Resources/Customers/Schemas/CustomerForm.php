@@ -13,6 +13,11 @@ class CustomerForm
             ->components([
                 TextInput::make('name')
                     ->required(),
+                TextInput::make("phone")
+                ->required(),
+                TextInput::make('address')
+                ->required(),
+                TextInput::make(),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email()
