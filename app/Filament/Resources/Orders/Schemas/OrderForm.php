@@ -3,7 +3,10 @@
 namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Models\Customer;
+use App\Models\CustomerCoupon;
 use App\Models\Product;
+use App\Models\User;
+use App\Models\UserCoupon;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Filament\Forms\Components\DatePicker;
@@ -35,7 +38,18 @@ Wizard::make([
                     ->searchable()
                     ->options(function ():
                     array{
-                    return Customer::query()->pluck('email', 'id')->all();}),
+                    return Customer::query()->pluck('email', 'id')->all();})
+                    ->afterStateUpdated(function ($state, $get, $set) {
+                        $set('selected_customer', $state);
+                        if(empty($state)){
+                            $set('selected_customer', 0);
+                            return;
+                        }
+                         $set('address', Customer::find($state)?->address );
+                        }
+                        )
+                    
+                    ,
                     Select::make('status')
                         ->options([
                         'Pending' => 'Pending',
@@ -43,13 +57,18 @@ Wizard::make([
                         'In transit' => 'In transit',
                         'Delivered' => 'Delivered',
                         'Confirmed' => 'Confirmed',
-                    ])
-                    ,
+                    ]),
+
+                
+
+
+
 
         //DateTimePicker            
         DateTimePicker::make('deliver_date')
             ->seconds(false)
-            //Pendiente agregar un limite para dias
+//Pendiente agregar un limite para dias
+        
     //     ->native(false)
     //     ->disabledDates(function () { 
     //     $start = Carbon::now();
@@ -66,8 +85,33 @@ Wizard::make([
     // })
     , 
 
-        Toggle::make('discount')
+        Select::make('discount')
+
+                     ->searchable()
+                    ->options(function ($set,$state,$get):
+                    array{
+                    $array=[];
+                    if(!empty($get('selected_customer'))){
+                      $coupons = CustomerCoupon::with('coupons')->where("id_customer","=",$get('selected_customer'))->get();
+
+                    foreach ($coupons as $coupon) {
+                            $array[$coupon->id]=$coupon->coupons->name;
+                        }
+                
+                        return $array;
+                        
+                    }
+
+                    return $array;
+                   
+                   })
+                   ->afterStateUpdated(dd())
+
                     ->required(),
+
+
+
+
         ]),
  //DETAILS OF THE PRODUCT
     Step::make('Products')

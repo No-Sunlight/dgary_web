@@ -14,4 +14,17 @@ class Customer extends Model
         return $this->hasMany(Order::class);
     }
 
+       public function user_coupon(): HasMany
+    {
+        return $this->hasMany(CustomerCoupon::class,'id_coupon');
+    }
+
+        protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
 }

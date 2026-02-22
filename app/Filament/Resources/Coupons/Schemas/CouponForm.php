@@ -19,9 +19,10 @@ class CouponForm
                     ->required()
                     ->minValue(1)
                     ->maxValue(100)
+                    ->prefix('%')
                     ->integer()
                     ->numeric(),
-                TextInput::make('price')
+                TextInput::make('points_price')
                 //El cupon puede costar 0? Osea cuandos sea gratis
                     ->required()
                     ->integer()

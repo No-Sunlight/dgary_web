@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Customers\Schemas;
 
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 
 class CustomerForm
@@ -13,11 +14,6 @@ class CustomerForm
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make("phone")
-                ->required(),
-                TextInput::make('address')
-                ->required(),
-                TextInput::make(),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email()
@@ -25,6 +21,15 @@ class CustomerForm
                 TextInput::make('password')
                     ->password()
                     ->required(),
+                TextInput::make('phone')
+                    ->tel()
+                    ->required(),
+                Textarea::make('address')
+                    ->required()
+                    ->columnSpanFull(),
+                TextInput::make('points')
+                    ->numeric()
+                    ->default(0),
             ]);
     }
 }

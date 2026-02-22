@@ -20,7 +20,7 @@ class CouponsTable
                 TextColumn::make('discount')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('price')
+                TextColumn::make('points_price')
                     ->money()
                     ->sortable(),
                 IconColumn::make('status')

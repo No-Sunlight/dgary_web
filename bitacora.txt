@@ -1,0 +1,15 @@
+2/19/2026
+Pendientes: 
+->Ordenes, implementación con cupones y el customer. Posiblemente añadir una columna de imagen y
+fecha de entrega.
+->Relacion de customer y cupones. Poder visualizar los cupones que el customer tiene y editarlos de ser necesario
+*postadata (investigar si se puede cambiar diferentes tipos de forms dependiendo del rol)
+*postdata(Investigar la relacion de filament con hostinger)
+*postdata(Considerar añadir la opción de que cada orden tenga registrada la id del usuario que la autorizo)
+Se implementó de manera correcta los cupones. Hemos discutido como manejar el inventario de insumos,
+he tenido ideas al respecto.
+La mejor idea por el momento es tener una tabla llamada "Recetas" en la cual tengan las instrucciones
+de preparación de un producto preparable, al momento que se venda un producto de estos, un trigger
+en la base de datos restara la cantidad. Tambien en cuestion de caducidad, parece que todos los insumos se terminan rapido
+y nunca se conservan mas de dos días.
+Sin embargo, ciertos productos terminados pueden hecharse a peder (aguas, paletas), asi que pienso mejor solo crear un evento para revisar

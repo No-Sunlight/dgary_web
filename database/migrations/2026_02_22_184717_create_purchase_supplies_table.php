@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('orders', function (Blueprint $table) {
+        Schema::create('purchase_supplies', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->references('id')->on('customers')->nullabe();
-            $table->double('total');
-            // $table->enum('status', ['Pending','Canceled','In transit','Delivered','Confirmed']);
+            $table->foreignId('supplies_id')->references('id')->on('supplies');
+            $table->decimal("quantity");
+            $table->decimal("subtotal");
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('orders');
+        Schema::dropIfExists('purchase_supplies');
     }
 };
