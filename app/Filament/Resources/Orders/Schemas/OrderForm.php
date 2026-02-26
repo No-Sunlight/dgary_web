@@ -35,29 +35,38 @@ Wizard::make([
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
-                    //->required()
                     ->searchable()
+                    ->live()
                     ->options(function ():
                     array{
                     return Customer::query()->pluck('phone', 'id')->all();})
-                    ->afterStateUpdated(function ($state, $get, $set) {
+                    ->afterStateUpdated(function ($state, $get, $set) 
+                    {
+                        $customer=Customer::find($state);
                         $set('selected_customer', $state);
                         if(empty($state)){
                             $set('selected_customer', 0);
                             return;
                         }
-                         $set('customer_name', Customer::find($state)?->name );
-                         $set('customer_email',Customer::find($state)?->email);
+                        else{
+                         $set('customer_name', $customer->name );
+                         $set('customer_email', $customer->email);
+                         return;
+                        }
+                
                         }),
 
 
         TextInput::make("customer_name")
         ->label("Nombre")
+         ->dehydrated(false)
         ->live()
-        ->readOnly(),
-
-        
-    
+        ->disabled(),
+        TextInput::make("customer_email")
+        ->label("email")
+        ->dehydrated(false)
+        ->live()
+        ->disabled(),
 
         Select::make('discount')
 
@@ -110,15 +119,16 @@ Wizard::make([
         
             ->afterStateUpdated(function ($state, $get,Set $set) {
             $set('unit_price', product::find($state)?->price ?? 0);
-            if(empty($get('amount'))){
+            if(empty($get('quantity'))){
                 $set('subtotal', 0);
                 return;
             }
-        $set('subtotal', $get('amount') * $get('unit_price') );
+        $set('subtotal', $get('quantity') * $get('unit_price') );
+
             })
 
             ,
-        TextInput::make('amount')
+        TextInput::make('quantity')
         ->numeric()
         ->required()
         ->live()
@@ -133,12 +143,12 @@ Wizard::make([
             //SI ESTO SE ACTIVA SIGNIFICA QUE ESTOY EN UN EDIT Y SOLO QUIERO CAMBIAR EL PRECIO
             if( !empty($get('product_id'))){
             $set('unit_price', product::find($get('product_id'))?->price ?? 0);
-            $set('subtotal', $get('amount') * $get('unit_price'));
+            $set('subtotal', $get('quantity') * $get('unit_price'));
 
 
             }
             else{
-                $set('subtotal', $get('amount') * $get('unit_price'));
+                $set('subtotal', $get('quantity') * $get('unit_price'));
             }
 
         }),
@@ -148,18 +158,18 @@ Wizard::make([
                         ->live()
                         ->default(0)
                         ->prefix('$'),
-            
                         ])//REPEATER
                             ->addAction(function( Get $get, Set $set){
                             $total =collect($get('details'))->pluck('subtotal')->sum();
                             $set('total',$total);}
                         
                          )
-
-
-
         ]),
-]) //MAIN WIZARD 
+        TextInput::make("unit_price")
+        ->numeric()
+        ->live()
+        ->hidden()
+        ]) //MAIN WIZARD 
            ->columnSpanFull()
 
             ]);

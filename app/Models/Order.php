@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    protected $guarded = [];
+
       public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class,'customer_id');

@@ -1,0 +1,4 @@
+php artisan filament:optimize
+php artisan icons:cache
+
+OPCACHE
