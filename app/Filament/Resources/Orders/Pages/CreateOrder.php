@@ -19,7 +19,9 @@ class CreateOrder extends CreateRecord
             $data["discount"]=$coupon->discount;
             $data["total"]=$total;
             $coupon->status=false;
+            $coupon->save();
         }
+
 
 
     return $data;

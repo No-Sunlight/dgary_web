@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CustomerCoupon extends Model
 {
+    //ESTE MODELO TIENE UN OBSERVER
     protected $guarded = [];
 
 

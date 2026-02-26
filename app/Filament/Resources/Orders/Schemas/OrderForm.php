@@ -70,6 +70,7 @@ Wizard::make([
 
         Select::make('discount')
                     ->searchable()
+                    ->default(0)
                     ->options(function ($get):
                     array{
                     $array=[];
@@ -82,8 +83,7 @@ Wizard::make([
                         return $array;}
 
                     else{
-                    return $array;}})
-                    ->required(),
+                    return $array;}}),
 
 
 
