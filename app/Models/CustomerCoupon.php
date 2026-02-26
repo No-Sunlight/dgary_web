@@ -12,12 +12,12 @@ class CustomerCoupon extends Model
 
        public function coupons(): BelongsTo
     {
-        return $this->belongsTo(Coupon::class,'id_coupon');
+        return $this->belongsTo(Coupon::class,'coupon_id');
     }
 
         public function customers(): BelongsTo
     {
-        return $this->belongsTo(Customer::class,'id_customer');
+        return $this->belongsTo(Customer::class,'customer_id');
     }
 
     

@@ -15,6 +15,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
@@ -30,7 +31,7 @@ class OrderForm
             ->components([
 
 Wizard::make([
-    Step::make('Order data')
+    Step::make('Información del cliente')
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
@@ -38,61 +39,34 @@ Wizard::make([
                     ->searchable()
                     ->options(function ():
                     array{
-                    return Customer::query()->pluck('email', 'id')->all();})
+                    return Customer::query()->pluck('phone', 'id')->all();})
                     ->afterStateUpdated(function ($state, $get, $set) {
                         $set('selected_customer', $state);
                         if(empty($state)){
                             $set('selected_customer', 0);
                             return;
                         }
-                         $set('address', Customer::find($state)?->address );
-                        }
-                        )
-                    
-                    ,
-                    Select::make('status')
-                        ->options([
-                        'Pending' => 'Pending',
-                        'Canceled' => 'Canceled',
-                        'In transit' => 'In transit',
-                        'Delivered' => 'Delivered',
-                        'Confirmed' => 'Confirmed',
-                    ]),
-
-                
+                         $set('customer_name', Customer::find($state)?->name );
+                         $set('customer_email',Customer::find($state)?->email);
+                        }),
 
 
+        TextInput::make("customer_name")
+        ->label("Nombre")
+        ->live()
+        ->readOnly(),
 
-
-        //DateTimePicker            
-        DateTimePicker::make('deliver_date')
-            ->seconds(false)
-//Pendiente agregar un limite para dias
         
-    //     ->native(false)
-    //     ->disabledDates(function () { 
-    //     $start = Carbon::now();
-    //     $end = $start->copy()->addDays(15);
-    //     $period = CarbonPeriod::create($start, $end);
-    //     $weekends = [];
-    //     foreach ($period as $date) {
-    //         if ($date->isWeekend()) {
-    //             $weekends[] = $date->format('Y-m-d');
-    //         }
-    //     }
- 
-    //     return $weekends;
-    // })
-    , 
+    
 
         Select::make('discount')
 
-                     ->searchable()
-                    ->options(function ($set,$state,$get):
+                    ->searchable()
+                    ->options(function ($get):
                     array{
                     $array=[];
                     if(!empty($get('selected_customer'))){
-                      $coupons = CustomerCoupon::with('coupons')->where("id_customer","=",$get('selected_customer'))->get();
+                      $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('selected_customer'))->get();
 
                     foreach ($coupons as $coupon) {
                             $array[$coupon->id]=$coupon->coupons->name;
@@ -102,10 +76,12 @@ Wizard::make([
                         
                     }
 
+                    else{
                     return $array;
+                    }
+
                    
                    })
-                   ->afterStateUpdated(dd())
 
                     ->required(),
 
