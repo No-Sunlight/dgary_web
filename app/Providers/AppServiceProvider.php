@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Observers\DetailObserver;
 use App\Observers\ProductObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Product::observe(ProductObserver::class);
+        OrderDetail::observe(DetailObserver::class);
         $this->configureDefaults();
 
 

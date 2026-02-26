@@ -69,7 +69,6 @@ Wizard::make([
         ->disabled(),
 
         Select::make('discount')
-
                     ->searchable()
                     ->options(function ($get):
                     array{
@@ -78,20 +77,12 @@ Wizard::make([
                       $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('selected_customer'))->get();
 
                     foreach ($coupons as $coupon) {
-                            $array[$coupon->id]=$coupon->coupons->name;
-                        }
+                            $array[$coupon->id]=$coupon->coupons->name;}
                 
-                        return $array;
-                        
-                    }
+                        return $array;}
 
                     else{
-                    return $array;
-                    }
-
-                   
-                   })
-
+                    return $array;}})
                     ->required(),
 
 
@@ -125,9 +116,7 @@ Wizard::make([
             }
         $set('subtotal', $get('quantity') * $get('unit_price') );
 
-            })
-
-            ,
+            }),
         TextInput::make('quantity')
         ->numeric()
         ->required()
