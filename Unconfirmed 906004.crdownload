@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 27, 2026 at 04:20 AM
+-- Generation Time: Feb 27, 2026 at 05:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -197,20 +197,6 @@ CREATE TABLE `failed_jobs` (
   `exception` longtext NOT NULL,
   `failed_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `ingredients`
---
-
-CREATE TABLE `ingredients` (
-  `name` varchar(55) NOT NULL,
-  `description` varchar(55) DEFAULT NULL,
-  `id_provider` int(11) DEFAULT NULL,
-  `stock` decimal(10,2) NOT NULL,
-  `status` tinyint(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -490,6 +476,36 @@ CREATE TABLE `purchase_supplies` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `recipes`
+--
+
+CREATE TABLE `recipes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `description` varchar(100) NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `produced_quantity` decimal(8,3) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `recipe_supplies`
+--
+
+CREATE TABLE `recipe_supplies` (
+  `id` bigint(20) NOT NULL,
+  `recipe_id` bigint(20) UNSIGNED NOT NULL,
+  `supply_id` bigint(20) UNSIGNED NOT NULL,
+  `amount` decimal(8,3) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `roles`
 --
 
@@ -628,6 +644,7 @@ CREATE TABLE `supplies` (
   `name` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
   `stock` decimal(8,2) NOT NULL,
+  `stock_type` enum('liters','kilograms','units') NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -809,6 +826,21 @@ ALTER TABLE `purchases`
 ALTER TABLE `purchase_supplies`
   ADD PRIMARY KEY (`id`),
   ADD KEY `purchase_supplies_supplies_id_foreign` (`supplies_id`);
+
+--
+-- Indexes for table `recipes`
+--
+ALTER TABLE `recipes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `recipes_id_products` (`product_id`);
+
+--
+-- Indexes for table `recipe_supplies`
+--
+ALTER TABLE `recipe_supplies`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `supplies_id_foreign` (`supply_id`),
+  ADD KEY `recipe_id_foreign` (`recipe_id`);
 
 --
 -- Indexes for table `roles`
@@ -1011,6 +1043,19 @@ ALTER TABLE `purchases`
 --
 ALTER TABLE `purchase_supplies`
   ADD CONSTRAINT `purchase_supplies_supplies_id_foreign` FOREIGN KEY (`supplies_id`) REFERENCES `supplies` (`id`);
+
+--
+-- Constraints for table `recipes`
+--
+ALTER TABLE `recipes`
+  ADD CONSTRAINT `recipes_id_products` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`);
+
+--
+-- Constraints for table `recipe_supplies`
+--
+ALTER TABLE `recipe_supplies`
+  ADD CONSTRAINT `recipe_id_foreign` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`),
+  ADD CONSTRAINT `supplies_id_foreign` FOREIGN KEY (`supply_id`) REFERENCES `supplies` (`id`);
 
 --
 -- Constraints for table `role_has_permissions`
