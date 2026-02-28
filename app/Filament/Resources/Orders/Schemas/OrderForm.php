@@ -111,7 +111,7 @@ Step::make('Información del cliente')
             $subtotal=$get('subtotal');
             $set('total', ($subtotal-$subtotal*$get('discount')/100));
         }
-    })
+    })//Validation
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
@@ -148,8 +148,11 @@ Step::make('Información del cliente')
         ->live()
         ->disabled(),
 
+
+
         Select::make('coupon_id')
                     ->searchable()
+                    ->disabledOn('edit') 
                     ->options(function ($get):
                     array{
                     $array=[];

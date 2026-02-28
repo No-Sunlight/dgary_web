@@ -9,9 +9,9 @@ class Coupon extends Model
 {
     protected $guarded = [];
 
-       public function user_coupon(): HasMany
+       public function details(): HasMany
     {
-        return $this->hasMany(CustomerCoupon::class,'id_coupon');
+        return $this->hasMany(CustomerCoupon::class,'coupon_id');
     }
 
     
