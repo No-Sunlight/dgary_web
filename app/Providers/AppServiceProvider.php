@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Product::observe(ProductObserver::class);
-        OrderDetail::observe(DetailObserver::class);
+      //  OrderDetail::observe(DetailObserver::class);
         $this->configureDefaults();
 
 

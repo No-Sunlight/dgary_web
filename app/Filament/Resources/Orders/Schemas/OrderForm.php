@@ -104,7 +104,8 @@ Wizard::make([
 
 
 Step::make('Información del cliente')
- ->afterValidation(function ($set,$get) {
+//Para este punto ya debería de haberse establecido tanto el cupon, descuento y subtotal. Esta función calcula el total
+->afterValidation(function ($set,$get) {
 //Dios bendiga a aftervalidation
         if (true) {
             $subtotal=$get('subtotal');
@@ -188,29 +189,14 @@ Step::make('Información del cliente')
         TextInput::make('subtotal')
         ->readOnly(),
         TextInput::make("discount")
+        ->prefix('%')
+        ->default(0)
         ->readOnly(),
         TextInput::make('total')
         ->readOnly()
-        ->live()
-        ->prefix('%')
 
 
         ])
-        // ->addAction(function( $get, $set){
-        //  $discount=$get('discount');
-        //  Es cero, entonces no hay descuento
-        //  if(!$discount==0){
-        //  $set('total',($get('discount')/100) * $get('subtotal'));
-
-        //  }
-        //  else{
-        // $set('total',$get('subtotal'));
-        //  }}
-        // )
-
-
-
-
 
 
 
