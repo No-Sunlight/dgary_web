@@ -5,11 +5,9 @@ namespace App\Filament\Resources\Orders\Schemas;
 use App\Models\Customer;
 use App\Models\CustomerCoupon;
 use App\Models\Product;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
@@ -29,9 +27,9 @@ Wizard::make([
  //DETAILS OF THE PRODUCT
     Step::make('Products')
         ->schema([
-         TextInput::make('total')
+         TextInput::make('preview_total')
                 ->numeric()
-                ->readOnly()
+                ->disabled()
                 ->live()
                 ->default(0)
                 ->prefix('$'),
@@ -88,8 +86,9 @@ Wizard::make([
                         ])//REPEATER
                             ->addAction(function( Get $get, Set $set){
                             $total =collect($get('details'))->pluck('subtotal')->sum();
-                            $set('total',$total);
                             $set('preview_total',$total);
+                            $set('subtotal',$total);
+                          //  $set('total',$total);
 
                             }
 
@@ -105,6 +104,13 @@ Wizard::make([
 
 
 Step::make('Información del cliente')
+ ->afterValidation(function ($set,$get) {
+//Dios bendiga a aftervalidation
+        if (true) {
+            $subtotal=$get('subtotal');
+            $set('total', ($subtotal-$subtotal*$get('discount')/100));
+        }
+    })
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
@@ -141,15 +147,13 @@ Step::make('Información del cliente')
         ->live()
         ->disabled(),
 
-        Select::make('discount')
+        Select::make('coupon_id')
                     ->searchable()
                     ->options(function ($get):
                     array{
                     $array=[];
                     if(!empty($get('selected_customer'))){
-                    // 
                     $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('selected_customer'))->where('status','=','1')->get();
-                      //Cambiar a solo disponibles  
 
                     foreach ($coupons as $coupon) {
                             $array[$coupon->id]=$coupon->coupons->name;}
@@ -157,22 +161,52 @@ Step::make('Información del cliente')
                         return $array;}
 
                     else{
-                    return $array;}}),
+                    return $array;}})
+                    ->afterStateUpdated(
+                        function($set,$state,$get){
+                            if($state>0){
+                         $discount =CustomerCoupon::find($state)?->discount ?? 0;
+                         $set('discount',$discount);  
+                        // $set('total', ($discount/100)*$get('subtotal') );
+                            }
+                            //Creo que me puedo ahorrar el if else, si pongo el valor default del discount a cero
+                            else{
+                                $set('discount',0);
+                            }
+                        }),
+
+
+                        
 
         ]),//Información
 
 
         Step::make("Confirmar pago")
         ->schema([
-        TextEntry::make('preview_total'),
-        TextEntry::make("preview_subtotal")
-    
-            
-
-
+            //Aqui estamos confirmando que el cliente quiere hacer la compra, 
+            //aunque la verdad sigo pensando que primero deberiamos de pregunta al cliente si quiere registrar sus puntos 
+        TextInput::make('subtotal')
+        ->readOnly(),
+        TextInput::make("discount")
+        ->readOnly(),
+        TextInput::make('total')
+        ->readOnly()
+        ->live()
+        ->prefix('%')
 
 
         ])
+        // ->addAction(function( $get, $set){
+        //  $discount=$get('discount');
+        //  Es cero, entonces no hay descuento
+        //  if(!$discount==0){
+        //  $set('total',($get('discount')/100) * $get('subtotal'));
+
+        //  }
+        //  else{
+        // $set('total',$get('subtotal'));
+        //  }}
+        // )
 
 
 
