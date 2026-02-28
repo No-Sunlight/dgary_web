@@ -26,6 +26,20 @@ Wizard::make([
     
  //DETAILS OF THE PRODUCT
     Step::make('Products')
+
+ //Estoy en un edit y quiero ver la información del cliente, tanto como su nombre e email   
+->afterValidation(function ($set,$get) {
+    
+    if(!empty($get('customer_id'))){
+       $customer = Customer::find($get('customer_id'));
+       $set('customer_name',$customer->name);
+       $set('customer_email',$customer->email);
+
+        }
+
+    })//After validation
+
+
         ->schema([
          TextInput::make('preview_total')
                 ->numeric()
@@ -43,16 +57,15 @@ Wizard::make([
             ->options(Product::all()->pluck('name', 'id'))
             ->reactive()
             ->required()
-        
             ->afterStateUpdated(function ($state, $get,Set $set) {
-            $set('unit_price', product::find($state)?->price ?? 0);
-            if(empty($get('quantity'))){
-                $set('subtotal', 0);
-                return;
-            }
-        $set('subtotal', $get('quantity') * $get('unit_price') );
+                    $set('unit_price', product::find($state)?->price ?? 0);
+                    if(empty($get('quantity'))){
+                        $set('subtotal', 0);
+                        return;
+                        }
+                    $set('subtotal', $get('quantity') * $get('unit_price') );
 
-            }),
+                    }),
         TextInput::make('quantity')
         ->numeric()
         ->required()
@@ -103,20 +116,24 @@ Wizard::make([
         ->hidden(),
 
 
-Step::make('Información del cliente')
+//INFORMACION DEL CLIENTE
 //Para este punto ya debería de haberse establecido tanto el cupon, descuento y subtotal. Esta función calcula el total
+Step::make('Información del cliente')
 ->afterValidation(function ($set,$get) {
 //Dios bendiga a aftervalidation
-        if (true) {
-            $subtotal=$get('subtotal');
-            $set('total', ($subtotal-$subtotal*$get('discount')/100));
-        }
-    })//Validation
+    
+    $subtotal=$get('subtotal');
+    $set('total', ($subtotal-$subtotal*$get('discount')/100));
+
+    })//After validation
+
+
         ->schema([
                 Select::make('customer_id')
                     ->label('Customer')
                     ->searchable()
                     ->live()
+                    ->disabledOn('edit')
                     ->options(function ():
                     array{
                     return Customer::query()->pluck('phone', 'id')->all();})
@@ -125,34 +142,28 @@ Step::make('Información del cliente')
                         $customer=Customer::find($state);
                         $set('selected_customer', $state);
                         if(empty($state)){
-                            $set('selected_customer', 0);
+                                $set('selected_customer', 0);
+                                 return;
+                        }else{
+                            $set('customer_name', $customer->name );
+                            $set('customer_email', $customer->email);
                             return;
-                        }
-                        else{
-                         $set('customer_name', $customer->name );
-                         $set('customer_email', $customer->email);
-                         return;
                         }
                 
                         }),
-
-
         TextInput::make("customer_name")
-        ->label("Nombre")
-         ->dehydrated(false)
-        ->live()
-        ->disabled(),
+            ->label("Nombre")
+            ->dehydrated(false)
+            ->live()
+            ->disabled(),
         TextInput::make("customer_email")
         ->label("email")
         ->dehydrated(false)
         ->live()
         ->disabled(),
 
-
-
         Select::make('coupon_id')
                     ->searchable()
-                    ->disabledOn('edit') 
                     ->options(function ($get):
                     array{
                     $array=[];
@@ -161,11 +172,17 @@ Step::make('Información del cliente')
 
                     foreach ($coupons as $coupon) {
                             $array[$coupon->id]=$coupon->coupons->name;}
-                
-                        return $array;}
-
-                    else{
-                    return $array;}})
+                        return $array;
+                        
+                    //Customer_id no esta vacio, lo que indica que fue activado por el edit.    
+                    }if(!empty($get('customer_id'))){
+                            $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('customer_id'))->get();
+                        foreach ($coupons as $coupon) {
+                            $array[$coupon->id]=$coupon->coupons->name;}
+                        return $array;
+                }else{
+                    return $array;
+                    }})
                     ->afterStateUpdated(
                         function($set,$state,$get){
                             if($state>0){
