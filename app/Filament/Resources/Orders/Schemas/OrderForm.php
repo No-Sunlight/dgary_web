@@ -34,7 +34,6 @@ Wizard::make([
        $customer = Customer::find($get('customer_id'));
        $set('customer_name',$customer->name);
        $set('customer_email',$customer->email);
-
         }
 
     })//After validation

@@ -27,12 +27,14 @@ class RecipeForm
                     ->label("Descripción")
                     ->required(),
                 Select::make('product_id')
-                    ->label("Producto")
+                    ->label("Producto a generar:")
                  ->options(Product::all()->pluck('name', 'id'))
-
                     ->required(),
                 TextInput::make('produced_quantity')
+                    ->label('Cantidad')
                     ->required()
+                    ->label("Cantidad a generada (aprox)")
+                    //->prefix("Unida")
                     ->numeric(),
         ]),
     Step::make('Ingredientes')
@@ -53,6 +55,8 @@ class RecipeForm
         ]),//Ingredientes
 
 ])//Wizard
+           ->columnSpanFull()
+
             ]);//Componentes
     }
 }
