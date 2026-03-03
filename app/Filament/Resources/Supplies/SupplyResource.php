@@ -21,6 +21,8 @@ class SupplyResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'insumos';
+    protected static ?string $modelLabel = 'Insumos';
+
 
     public static function form(Schema $schema): Schema
     {

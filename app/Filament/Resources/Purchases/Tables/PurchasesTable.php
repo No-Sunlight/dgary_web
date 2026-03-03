@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Purchases\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -14,7 +15,8 @@ class PurchasesTable
     {
         return $table
             ->columns([
-                TextColumn::make('user_id')
+                TextColumn::make('responsible.name')
+                    ->label('Responsable')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('total')
@@ -23,7 +25,9 @@ class PurchasesTable
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('Fecha')
+                   // ->toggleable(isToggledHiddenByDefault: true),
+                   ,
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -34,6 +38,7 @@ class PurchasesTable
             ])
             ->recordActions([
                 EditAction::make(),
+                ViewAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

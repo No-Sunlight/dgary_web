@@ -21,6 +21,8 @@ class PurchaseResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'Resuministro';
+    protected static ?string $modelLabel = 'Compra de insumos';
+
 
     public static function form(Schema $schema): Schema
     {

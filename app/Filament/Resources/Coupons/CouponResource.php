@@ -21,6 +21,8 @@ class CouponResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'Cupones';
+    protected static ?string $modelLabel = 'Cupones';
+
 
     public static function form(Schema $schema): Schema
     {

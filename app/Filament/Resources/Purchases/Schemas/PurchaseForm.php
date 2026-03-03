@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Purchases\Schemas;
 
 use App\Models\PurchaseSupply;
+use App\Models\supply;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -31,11 +32,11 @@ class PurchaseForm
      Repeater::make('details')
                     ->relationship()
         ->schema([
-             Select::make('supply_id')
+             Select::make('supplies_id')
             ->label('Insumo')
-            ->options(PurchaseSupply::all()->pluck('name', 'id'))
+            ->options(supply::all()->pluck('name', 'id'))
             ->required(),
-             TextInput::make('amount')
+             TextInput::make('quantity')
             ->label('Cantidad')
             ->required(),
             

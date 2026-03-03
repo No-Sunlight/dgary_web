@@ -33,7 +33,7 @@ class RecipeForm
                 TextInput::make('produced_quantity')
                     ->label('Cantidad')
                     ->required()
-                    ->label("Cantidad a generada (aprox)")
+                    ->label("Cantidad a generar (aprox)")
                     //->prefix("Unida")
                     ->numeric(),
         ]),
