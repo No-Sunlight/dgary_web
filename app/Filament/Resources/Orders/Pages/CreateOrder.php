@@ -19,20 +19,20 @@ class CreateOrder extends CreateRecord
 
 
 
-    protected function getCreateFormAction(): Action
-    {
-        return parent::getCreateFormAction()
-        ->submit(form:null)
-        ->requiresConfirmation()
-        ->modalDescription("Confimrar pedido")
-        ->action(function ()
-        {
-            $this->closeActionModal();
-            $this->cteate();
-        });
-        //
+    // protected function getCreateFormAction(): Action
+    // {
+    //     return parent::getCreateFormAction()
+    //     ->submit(form:null)
+    //     ->requiresConfirmation()
+    //     ->modalDescription("Confimrar pedido")
+    //     ->action(function ()
+    //     {
+    //         $this->closeActionModal();
+    //         $this->cteate();
+    //     });
+    //     //
 
-    }
+    // }
 
     
 
@@ -69,6 +69,8 @@ class CreateOrder extends CreateRecord
             $customer->points= $customer->points+$points;
              $customer->save();
              }
+
+             
 
     //No lo hizo un cliente registrado
         else{

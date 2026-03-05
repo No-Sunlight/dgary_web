@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerCoupon;
 use App\Models\Product;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -28,6 +29,8 @@ Wizard::make([
  //DETAILS OF THE PRODUCT
     Step::make('Products')
 
+
+    
  //Estoy en un edit y quiero ver la información del cliente, tanto como su nombre e email   
 ->afterValidation(function ($set,$get) {
     
@@ -36,9 +39,16 @@ Wizard::make([
        $set('customer_name',$customer->name);
        $set('customer_email',$customer->email);
         }
+        
 
     })//After validation
 
+
+    ->beforeValidation(function ($set,$get){
+
+   return $globalProducts = [];
+
+    })
 
         ->schema([
          TextInput::make('preview_total')
@@ -55,23 +65,25 @@ Wizard::make([
             ->label('Product')
             ->searchable()
             ->options(Product::all()->pluck('name', 'id'))
+            ->preload()
             ->reactive()
             ->required()
             ->afterStateUpdated(function ($state, $get,Set $set) {
-                    $set('unit_price', product::find($state)?->price ?? 0);
+                $product_info=product::find($state);
+                    $set('unit_price', $product_info->price ?? 0);
                     if(empty($get('quantity'))){
                         $set('subtotal', 0);
                         return;
                         }
                     $set('subtotal', $get('quantity') * $get('unit_price') );
-
+                    $set('product_name', $product_info->name);
+                    $globalProducts[]=$product_info->name;
                     }),
         TextInput::make('quantity')
         ->numeric()
         ->required()
         ->live()
         ->dehydrated()
-
         ->afterStateUpdated(function ($state,$set,$get)
             {
             if (empty($state)) {
@@ -114,6 +126,7 @@ Wizard::make([
         ->numeric()
         ->live()
         ->hidden(),
+        
 
 
 //INFORMACION DEL CLIENTE
@@ -124,6 +137,31 @@ Step::make('Información del cliente')
     
     $subtotal=$get('subtotal');
     $set('total', ($subtotal-$subtotal*$get('discount')/100));
+
+    //Obtener información de la orden
+      $set('orden',   function ($get) {
+        $details = $get('details');
+        if (empty($details)) {
+            return '<p>No details available.</p>';
+        }
+       // dd($details);
+        $html = '<ul>';
+        foreach ($details as $item) {
+            $productName = Product::find($item['product_id'])->name;
+            $quantity = $item['quantity'] ?? 0;
+
+           // dd($productName);
+            
+            $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
+        }
+        $html .= '</ul>';
+
+        return $html;
+        });
+
+
+//Populate las ordenes
+
 
     })//After validation
 
@@ -214,16 +252,38 @@ Step::make('Información del cliente')
         ->readOnly(),
         TextInput::make('total')
         ->readOnly(),
-        TextInput::make('pagado')
-        ->afterStateUpdated(
-        function ($state, $get, $set) {}
+    //Esto para calcular el cambio
+    TextInput::make('amount_paid')
+    ->label('Recibido')
+    ->numeric()
+    ->prefix('$')
+    ->required()
+    ->live(onBlur: true) 
+    ->dehydrated(false)
+    ->minValue(fn ( $get) => (float) $get('total')) 
+    ->afterStateUpdated(function ( $get, $set, $state) {
+        $total = (float) $get('total');
+        $paid = (float) $state;
 
-        )
-        ->dehydrated(false) //Se supone que esto impide que se mande el input
+        if ($paid >= $total) {
+            $change = $paid - $total;
+            $set('change_due', number_format($change, 2, '.', ''));
+        } else {
+            $set('change_due', '0.00');
+        }
+    })
+    
+    
+    ,
+    TextInput::make('change_due')
+    ->dehydrated(false)
+    ->readOnly()
+    ->live(),
 
-        ,
 
-        TextInput::make("")
+        TextEntry::make('orden')
+        ->html(),
+
 
 
     
