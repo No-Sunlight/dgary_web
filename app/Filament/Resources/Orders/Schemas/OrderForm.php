@@ -8,6 +8,7 @@ use App\Models\Product;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
@@ -212,8 +213,20 @@ Step::make('Información del cliente')
         ->default(0)
         ->readOnly(),
         TextInput::make('total')
-        ->readOnly()
+        ->readOnly(),
+        TextInput::make('pagado')
+        ->afterStateUpdated(
+        function ($state, $get, $set) {}
 
+        )
+        ->dehydrated(false) //Se supone que esto impide que se mande el input
+
+        ,
+
+        TextInput::make("")
+
+
+    
 
         ])
 

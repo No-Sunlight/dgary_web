@@ -39,6 +39,8 @@ class PurchaseForm
              TextInput::make('quantity')
             ->label('Cantidad')
             ->required(),
+            TextInput::make('Subtotal')
+            ->label('')            ,
             
         ])//Repeater
 
