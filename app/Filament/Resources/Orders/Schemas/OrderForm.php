@@ -8,6 +8,7 @@ use App\Models\Product;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
@@ -15,6 +16,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
+
 
 class OrderForm
 {
@@ -27,9 +29,7 @@ class OrderForm
 Wizard::make([
     
  //DETAILS OF THE PRODUCT
-    Step::make('Products')
-
-
+Step::make('Products')
     
  //Estoy en un edit y quiero ver la información del cliente, tanto como su nombre e email   
 ->afterValidation(function ($set,$get) {
@@ -44,11 +44,6 @@ Wizard::make([
     })//After validation
 
 
-    ->beforeValidation(function ($set,$get){
-
-   return $globalProducts = [];
-
-    })
 
         ->schema([
          TextInput::make('preview_total')
@@ -69,7 +64,8 @@ Wizard::make([
             ->reactive()
             ->required()
             ->afterStateUpdated(function ($state, $get,Set $set) {
-                $product_info=product::find($state);
+                    $product_info=product::find($state);
+                  //$set('product_info',$product_info);
                     $set('unit_price', $product_info->price ?? 0);
                     if(empty($get('quantity'))){
                         $set('subtotal', 0);
@@ -84,6 +80,16 @@ Wizard::make([
         ->required()
         ->live()
         ->dehydrated()
+        ->maxValue(function($get)
+        {
+        $product = Product::find($get('product_id'));
+        return $product->stock;
+
+
+        }
+        )
+
+
         ->afterStateUpdated(function ($state,$set,$get)
             {
             if (empty($state)) {
@@ -112,16 +118,10 @@ Wizard::make([
                             ->addAction(function( Get $get, Set $set){
                             $total =collect($get('details'))->pluck('subtotal')->sum();
                             $set('preview_total',$total);
-                            $set('subtotal',$total);
-                          //  $set('total',$total);
-
-                            }
-
-                        
-                         )
+                            $set('subtotal',$total);})
                              ->collapsible()
 
-        ]), //Products details
+        ]),
         TextInput::make("unit_price")
         ->numeric()
         ->live()
@@ -132,32 +132,32 @@ Wizard::make([
 //INFORMACION DEL CLIENTE
 //Para este punto ya debería de haberse establecido tanto el cupon, descuento y subtotal. Esta función calcula el total
 Step::make('Información del cliente')
-->afterValidation(function ($set,$get) {
-//Dios bendiga a aftervalidation
-    
-    $subtotal=$get('subtotal');
-    $set('total', ($subtotal-$subtotal*$get('discount')/100));
-
-    //Obtener información de la orden
-      $set('orden',   function ($get) {
-        $details = $get('details');
-        if (empty($details)) {
-            return '<p>No details available.</p>';
-        }
-       // dd($details);
-        $html = '<ul>';
-        foreach ($details as $item) {
-            $productName = Product::find($item['product_id'])->name;
-            $quantity = $item['quantity'] ?? 0;
-
-           // dd($productName);
+        ->afterValidation(function ($set,$get) {
+        //Dios bendiga a aftervalidation
             
-            $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
-        }
-        $html .= '</ul>';
+            $subtotal=$get('subtotal');
+            $set('total', number_format($subtotal-$subtotal*$get('discount')/100,2,'.'));
 
-        return $html;
-        });
+            //Obtener información de la orden
+            $set('orden',   function ($get) {
+                $details = $get('details');
+
+            // dd($details);
+               // $html = '<ul>';
+               $string ="";
+                foreach ($details as $item) {
+                    $productName = Product::find($item['product_id'])->name;
+                    $quantity = $item['quantity'] ?? 0;
+
+                // dd($productName);
+                    
+                  //  $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
+                   $string.= "Producto: {$productName} Cantidad: {$quantity}";
+                }
+                //$html .= '</ul>';
+
+                return $string;
+                });
 
 
 //Populate las ordenes
@@ -212,7 +212,7 @@ Step::make('Información del cliente')
                             $array[$coupon->id]=$coupon->coupons->name;}
                         return $array;
                         
-                    //Customer_id no esta vacio, lo que indica que fue activado por el edit.    
+                    //Customer_id no esta vacio, lo que indica que fue activado por el view.    
                     }if(!empty($get('customer_id'))){
                             $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('customer_id'))->get();
                         foreach ($coupons as $coupon) {
@@ -240,7 +240,8 @@ Step::make('Información del cliente')
         ]),//Información
 
 
-        Step::make("Confirmar pago")
+ Step::make("Confirmar pago")
+
         ->schema([
             //Aqui estamos confirmando que el cliente quiere hacer la compra, 
             //aunque la verdad sigo pensando que primero deberiamos de pregunta al cliente si quiere registrar sus puntos 
@@ -252,6 +253,7 @@ Step::make('Información del cliente')
         ->readOnly(),
         TextInput::make('total')
         ->readOnly(),
+
     //Esto para calcular el cambio
     TextInput::make('amount_paid')
     ->label('Recibido')
@@ -267,27 +269,19 @@ Step::make('Información del cliente')
 
         if ($paid >= $total) {
             $change = $paid - $total;
-            $set('change_due', number_format($change, 2, '.', ''));
+            $set('change_due', number_format($change, 2, '.'));
         } else {
-            $set('change_due', '0.00');
+            $set('change_due', 'Incompleto');
         }
-    })
-    
-    
-    ,
+    }),
     TextInput::make('change_due')
     ->dehydrated(false)
-    ->readOnly()
-    ->live(),
+    ->readOnly(),
 
 
-        TextEntry::make('orden')
-        ->html(),
-
-
-
-    
-
+    TextInput::make('orden')
+    ->dehydrated(false)
+    ->readOnly(),
         ])
 
 
