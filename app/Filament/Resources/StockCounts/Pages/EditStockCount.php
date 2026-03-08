@@ -16,4 +16,12 @@ class EditStockCount extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+     protected function afterSave(): void
+    {
+     $record = $this->record;
+     $record->last_counted_at = today();
+     $record ->save();
+
+    }
 }
