@@ -80,13 +80,9 @@ Step::make('Products')
         ->required()
         ->live()
         ->dehydrated()
-        ->maxValue(function($get)
-        {
+        ->maxValue(function($get){
         $product = Product::find($get('product_id'));
-        return $product->stock;
-
-
-        }
+        return $product->stock;}
         )
 
 
