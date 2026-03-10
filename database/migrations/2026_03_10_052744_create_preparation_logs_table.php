@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('recipe_id')->constrained()->cascadeOnDelete();//La receta a la que esta ligada
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();//Quien fue quien la preparo o aprobo
-            $table->decimal('quantity_produced', 8, 2)->default(1);//Cuanto Produje
+            $table->decimal('produced_quantity', 8, 2)->default(1);//Cuanto Produje
+            $table->text('notes')->nullable();//Si algo saliera mal. Creo que esta columna si es util.
             $table->timestamps();
         });
     }

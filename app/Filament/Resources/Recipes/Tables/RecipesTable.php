@@ -11,6 +11,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -61,22 +62,50 @@ class RecipesTable
                     Necesito crear una logica que primero revise que si existan insumos suficientes antes
                     de proceder con la receta
                     */
+
+                    $supplies = [];
+
                     foreach ($receta->details as $details)
                         {
                             $supply = supply::find($details->supply_id);
-                            $supply->stock = $supply->stock-$details->amount;
-                            $supply->save();
+                            if($supply->stock<$details->amount){
+                                    Notification::make("Failure")
+                                    ->title('Insumos insuficientes: '.$supply->name)
+                                    ->danger()
+                                    ->send();
+                                    return;
+                            }else{
+                                $supply->stock = $supply->stock - $details->amount;
+                                array_push($supplies,$supply);
+
+                            }
                         }
+
+
+                    foreach ($supplies as $supply){
+
+                        $supply->stock = $supply->stock - $details->amount;
+                        $supply->save();
+                        
+                    }
+
+                    
+                    $product = Product::find($record->product_id);
+                    $product->stock = $product->stock+ $record->produced_quantity;
+                    $product->save();
+
                     $preparation_log = new PreparationLog();
                     $preparation_log->user_id=auth()->id();    
+                    $preparation_log->recipe_id= $record->id;
+                    $preparation_log->produced_quantity = $record->produced_quantity;
+                    $preparation_log->save();
 
+                     Notification::make("Success")
+                    ->title('Guardado')
+                    ->success()
+                    ->send();
+                    
 
-
-                        return response()->streamDownload(function () use ($record) {
-                            echo Pdf::loadHtml(
-                                Blade::render('OrderPdf', ['record' => $record])
-                            )->stream();
-                        }, $record->id . '.pdf');
                     }), 
             ])
             ->toolbarActions([
