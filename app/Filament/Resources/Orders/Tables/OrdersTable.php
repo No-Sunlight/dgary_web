@@ -44,7 +44,7 @@ class OrdersTable
             ->recordActions([
                 EditAction::make(),
                 ViewAction::make(),
-                    Action::make('pdf') 
+                Action::make('pdf') 
                     ->label('PDF')
                     ->color('success')
                     ->icon(Heroicon::Printer)

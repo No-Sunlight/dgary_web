@@ -47,6 +47,8 @@ class StockCountsTable
             ])
             ->recordActions([
                 EditAction::make(),
+
+                
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
