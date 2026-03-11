@@ -26,25 +26,53 @@ class PurchaseForm
                 TextInput::make('total')
                     ->required()
                     ->numeric(),
-        ]),
+        ]),//Compra Step
     Step::make('details')
     ->schema([
+    TextInput::make('preview_total')
+                ->numeric()
+                ->disabled()
+                ->live()
+                ->default(0)
+                ->prefix('$'),
      Repeater::make('details')
-                    ->relationship()
-        ->schema([
+            ->relationship()
+            ->schema([
              Select::make('supplies_id')
-            ->label('Insumo')
+            ->label('Insumo:')
             ->options(supply::all()->pluck('name', 'id'))
+          // ->relationship('supplies', 'name')
+
             ->required(),
              TextInput::make('quantity')
             ->label('Cantidad')
             ->required(),
             TextInput::make('Subtotal')
-            ->label('')            ,
-            
+            ->label('Subtotal')
+            ->required(),
         ])//Repeater
+         ->addAction(function(  $get,  $set){
+                            $total =collect($get('details'))->pluck('subtotal')->sum();
+                            $set('preview_total',$total); //Deberiamos de tener un subtotal y total
+                            //No estoy muy seguro, una parte de mi dice que no es necesario puesto no creo
+                            $set('subtotal',$total);})
+                             ->collapsible()
 
-        ]),//Ingredientes
+        ]),//Ingredientes comprados
+
+
+    Step::make("Confirmación")
+
+->afterValidation( function($get,$set){
+            $subtotal=$get('subtotal');
+
+                }
+            )
+
+    ->schema([
+            
+        ])
+
 
 ])//Wizard
             ]);//Componentes

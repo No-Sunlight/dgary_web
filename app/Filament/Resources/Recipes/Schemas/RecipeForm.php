@@ -5,7 +5,9 @@ namespace App\Filament\Resources\Recipes\Schemas;
 use App\Models\Product;
 use App\Models\supply;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
@@ -23,7 +25,7 @@ class RecipeForm
                 TextInput::make('name')
                     ->label("Nombre")
                     ->required(),
-                TextInput::make('description')
+                Textarea::make('description')
                     ->label("Descripción")
                     ->required(),
                 Select::make('product_id')

@@ -15,17 +15,21 @@ class PreparationLogsTable
     {
         return $table
             ->columns([
-                TextColumn::make('recipe_id')
+                TextColumn::make('recipes.name')
                     ->numeric()
+                    ->label("Tipo de receta")
                     ->sortable(),
-                TextColumn::make('user_id')
+                TextColumn::make('users.name')
                     ->numeric()
+                    ->label("Responsable")
                     ->sortable(),
                 TextColumn::make('produced_quantity')
                     ->numeric()
+                    ->label("Cantidad producida")
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
+                    ->label("Día de preparación: ")
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
