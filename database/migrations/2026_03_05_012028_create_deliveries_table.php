@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('deliveries', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id')->index('deliveries_user_id_foreign');
-            $table->unsignedBigInteger('order_id');
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            //$table->unsignedBigInteger('order_id');
             $table->string('address');
             $table->enum('status', ['pending', 'ready', 'completed', 'canceled'])->default('completed');
             $table->decimal('total', 10);

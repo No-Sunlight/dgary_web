@@ -20,6 +20,7 @@ class CustomerForm
                     ->required(),
                 TextInput::make('password')
                     ->password()
+                    ->hiddenOn('view')
                     ->required(),
                 TextInput::make('phone')
                     ->tel()
