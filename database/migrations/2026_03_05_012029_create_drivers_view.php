@@ -8,10 +8,20 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        DB::statement("CREATE VIEW `drivers` AS select `u`.`id` AS `id`,`u`.`name` AS `name`,`u`.`email` AS `email`,`u`.`password` AS `password` from ((`heladeria`.`users` `u` join `heladeria`.`model_has_roles` `mhr` on(`mhr`.`model_id` = `u`.`id` and `mhr`.`model_type` = 'App\\Models\\User')) join `heladeria`.`roles` `r` on(`r`.`id` = `mhr`.`role_id`)) where `r`.`name` = 'Repartidor'");
-    }
+public function up(): void
+{
+    DB::statement("
+CREATE OR REPLACE VIEW `drivers` AS 
+SELECT 
+    u.id, 
+    u.name, 
+    u.email, 
+    u.password 
+FROM users u 
+JOIN model_has_roles mhr ON mhr.model_id = u.id
+JOIN roles r ON r.id = mhr.role_id 
+WHERE r.name = 'Repartidor'");
+}
 
     /**
      * Reverse the migrations.
