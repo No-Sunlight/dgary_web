@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('recipes', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name', 50);
-            $table->string('description', 100);
+            $table->text('description');
             $table->unsignedBigInteger('product_id')->index('recipes_id_products');
             $table->decimal('produced_quantity', 8, 3);
             $table->timestamps();

@@ -72,11 +72,10 @@ class RecipesTable
                 '4' => 'Cuatro Lotes (4x)',
             ])
             ->live()
-            ->default('1')
+            //->default('1')
             ->afterStateUpdated(function(Model $record,$state,$set){
             
               $set('lote',$state*$record->produced_quantity);
-               //$model->produced_quantity;
         
             }
             
@@ -84,18 +83,12 @@ class RecipesTable
             ->required(),
                 
             TextEntry::make('lote')
+                ->live()
+                ->default("0")
                 ->label('Cantidad Aproximada Creada'),
             ])
             ->action(function (Model $record,array $data) {
-                    $receta = Recipe::with('details')->find($record->id);
-                    /*Este for each es solamente provisional/borrador.
-                    Necesito crear una logica que primero revise que si existan insumos suficientes antes
-                    de proceder con la receta
-                    */
-                    
-
-
-                    
+                    $receta = Recipe::with('details')->find($record->id);        
 
                     $supplies = [];
 

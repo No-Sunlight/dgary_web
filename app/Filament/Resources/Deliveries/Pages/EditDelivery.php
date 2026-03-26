@@ -16,4 +16,22 @@ class EditDelivery extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+
+
+//     protected function mutateFormDataBeforeFill(array $data): array
+// {
+//     $data['status'] = auth()->id();
+
+//     return $data;
+// }
+
+protected function mutateFormDataBeforeSave(array $data): array
+{
+    
+    $data['status'] = "in_transit";
+    return $data;
+
+}
+
 }

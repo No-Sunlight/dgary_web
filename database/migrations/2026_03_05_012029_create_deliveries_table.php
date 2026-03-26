@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id')->index('deliveries_user_id_foreign');
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
             $table->string('address');
-            $table->enum('status', ['pending', 'ready', 'completed', 'canceled'])->default('completed');
+            $table->enum('status', ['pending', 'ready', 'completed', 'canceled','in_transit'])->default('pending');
             $table->decimal('total', 10);
             $table->timestamps();
         });
