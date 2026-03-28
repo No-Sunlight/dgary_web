@@ -2,13 +2,18 @@
 
 namespace App\Filament\Resources\Deliveries\Schemas;
 
+use App\Models\Customer;
 use App\Models\Delivery;
 use App\Models\Driver;
+use App\Models\Order;
+use App\Models\Product;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use PhpParser\Node\Stmt\Label;
 
 class DeliveryForm
 {
@@ -16,39 +21,47 @@ class DeliveryForm
     {
 
     //Esta parte se va a quedar simplemente para mostrar detalles. Para la accion view
+    //Pienso sobreescribir el formDelivery. 
         return $schema
                       
             ->components([
                 Select::make('user_id')
-                    ->required()
+             ->required()
                 ->label("Repartidor")
-                ->options(
-                    function(Model $record)
-                    {$unavailabe_drivers = Delivery::where('status','=','in_transit')->pluck('user_id')->toArray();
-                     if(empty($unavailabe_drivers)){//No hay ordenes en transito asi que todos los drivers estan disponibles
-                         return Driver::all()->pluck('name', 'id');
-                         }
-                    else{
-                            $drivers = Driver::all();
-                            $array =array();
-                    
-                           //Estoy editando y quiero cambiar el repartidor, si da empty significa que estoy asignando por primera vez
-                            if(!empty($record->user_id)){
-                            $array[$record->user_id]=Driver::find($record->user_id)->name;
-                            }
-                            foreach ($drivers as $driver){
-                                    
-                                if (!in_array($driver->id, $unavailabe_drivers)){
-                                    $array[$driver->id]=$driver->name;}}
-                                return $array;
-                        }
-                    })
-                    ,
-               
-    TextInput::make('address')
+                ->options(Driver::all()->pluck('name', 'id')),
+
+            TextEntry::make('client')
+            ->label("Cliente")
+            ->state(function(Model $record,$set)//Nota personal. La variable siempre se tiene que definir commo $record para acceder al registro
+            {
+                $order = Order::with('details')->find($record->order_id);
+                $customer = Customer::find($order->customer_id);
+                $html = '<ul>';
+                foreach ($order->details as $detail)
+                    {
+                $product= Product::find($detail->product_id);
+                $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";
+                }
+                $html .= '</ul>';
+
+                 $set('phone',$customer->phone);
+                 $set('details',$html);
+
+                return $customer->name;
+
+            }),
+            
+            TextEntry::make('phone')
+            ->label("Telefono"),
+
+           
+            
+            TextInput::make('address')
+                    ->label("Dirección")
                     ->disabled()
                     ->required(),
         Select::make('status')
+            ->label("Estatus")
                     ->options([
             'pending' => 'Pending',
             'ready' => 'Ready',
@@ -56,13 +69,18 @@ class DeliveryForm
             'canceled' => 'Canceled',
             'in_transit'=> 'In Transit'
         ])
-        ->disabled()
-
+                ->disabled()
                 ->required(),
                 TextInput::make('total')
                     ->required()
                      ->disabled()
+                     ->prefix("$")
                     ->numeric(),
+
+            TextEntry::make('details')
+            ->label('Productos: ')
+            ->html(),
+
             ]);
     }
 }

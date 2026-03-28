@@ -60,77 +60,70 @@ class RecipesTable
                     ->color('success')
                     ->icon(Heroicon::RocketLaunch)
                     ->modalHeading('¿Seguro de querer hacer esta preparación?')
-                 ->modalDescription('Las preparaciones deben de registrarse UNA VEZ CONCLUIDAS')
+                    ->modalDescription('Las preparaciones deben de registrarse UNA VEZ CONCLUIDAS')
+                    ->schema([
+                        Select::make('amount')
+                        ->label('¿Cuantos lotes desea registrar?')
+                        ->options([
+                            '1' => 'Un Lote (1x)',
+                            '2' => 'Dos Lotes (2x)',
+                            '3' => 'Tres Lotes (3x)',
+                            '4' => 'Cuatro Lotes (4x)',
+                                ])
+                        ->live()
+                        //->default('1')
+                        ->afterStateUpdated(function(Model $record,$state,$set){ 
+                        $set('lote',$state*$record->produced_quantity);})
+                        ->required(),
+                        TextEntry::make('lote')
+                            ->live()
+                            ->default("0")
+                            ->label('Cantidad Aproximada Creada'),
+                        ])
+                    ->action(function (Model $record,array $data) {
+                            $receta = Recipe::with('details')->find($record->id);        
 
-                 ->schema([
-            Select::make('amount')
-            ->label('¿Cuantos lotes desea registrar?')
-            ->options([
-                '1' => 'Un Lote (1x)',
-                '2' => 'Dos Lotes (2x)',
-                '3' => 'Tres Lotes (3x)',
-                '4' => 'Cuatro Lotes (4x)',
-            ])
-            ->live()
-            //->default('1')
-            ->afterStateUpdated(function(Model $record,$state,$set){
-            
-              $set('lote',$state*$record->produced_quantity);
-        
-            }
-            
-            )
-            ->required(),
-                
-            TextEntry::make('lote')
-                ->live()
-                ->default("0")
-                ->label('Cantidad Aproximada Creada'),
-            ])
-            ->action(function (Model $record,array $data) {
-                    $receta = Recipe::with('details')->find($record->id);        
+                            $supplies = [];
 
-                    $supplies = [];
+                            foreach ($receta->details as $details)
+                                {
+                                    $supply = supply::find($details->supply_id);
+                                    if($supply->stock< ($details->amount*$data['amount'])){
+                                            Notification::make("Failure")
+                                            ->title('Insumos insuficientes: '.$supply->name)
+                                            ->danger()
+                                            ->send();
+                                            return;
+                                    }else{
+                                        $supply->stock = $supply->stock - ($details->amount*$data['amount']);
+                                        array_push($supplies,$supply);
 
-                    foreach ($receta->details as $details)
-                        {
-                            $supply = supply::find($details->supply_id);
-                            if($supply->stock< ($details->amount*$data['amount'])){
-                                    Notification::make("Failure")
-                                    ->title('Insumos insuficientes: '.$supply->name)
-                                    ->danger()
-                                    ->send();
-                                    return;
-                            }else{
-                                $supply->stock = $supply->stock - ($details->amount*$data['amount']);
-                                array_push($supplies,$supply);
+                                    }
+                                }
 
+
+                            foreach ($supplies as $supply){
+
+                                //$supply->stock = $supply->stock - $details->amount;
+                                $supply->save();
+                                
                             }
-                        }
 
+                            
+                            $product = Product::find($record->product_id);
+                            $product->stock = $product->stock+ $record->produced_quantity;
+                            $product->save();
 
-                    foreach ($supplies as $supply){
+                            $preparation_log = new PreparationLog();
+                            $preparation_log->user_id=auth()->id(); //En algunos IDE esto da error, pero no es así.
+                            $preparation_log->recipe_id= $record->id;
+                            $preparation_log->produced_quantity = $record->produced_quantity;
+                            $preparation_log->save();
 
-                        //$supply->stock = $supply->stock - $details->amount;
-                        $supply->save();
-                        
-                    }
-
-                    
-                    $product = Product::find($record->product_id);
-                    $product->stock = $product->stock+ $record->produced_quantity;
-                    $product->save();
-
-                    $preparation_log = new PreparationLog();
-                    $preparation_log->user_id=auth()->id(); //En algunos IDE esto da error, pero no es así.
-                    $preparation_log->recipe_id= $record->id;
-                    $preparation_log->produced_quantity = $record->produced_quantity;
-                    $preparation_log->save();
-
-                     Notification::make("Success")
-                    ->title('Saved')
-                    ->success()
-                    ->send();
+                            Notification::make("Success")
+                            ->title('Saved')
+                            ->success()
+                            ->send();
                     
 
                     }), 
