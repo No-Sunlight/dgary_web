@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedBigInteger('customer_id')->nullable()->index('orders_customer_id_foreign');
             $table->decimal('subtotal', 10);
             $table->decimal('total', 10);

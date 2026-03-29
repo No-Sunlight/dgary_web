@@ -2,17 +2,23 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
+use App\Models\Order;
+use App\Models\Product;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
+
 
 class OrdersTable
 {
@@ -42,19 +48,50 @@ class OrdersTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
-                ViewAction::make(),
+                //EditAction::make(),
                 Action::make('pdf') 
                     ->label('PDF')
                     ->color('success')
                     ->icon(Heroicon::Printer)
                     ->action(function (Model $record) {
                         return response()->streamDownload(function () use ($record) {
+                            $product = new Product; //No me gusta hacer otra query para encontrar los detalles
                             echo Pdf::loadHtml(
-                                Blade::render('OrderPdf', ['record' => $record])
+                                Blade::render('OrderPdf', ['record' => $record,'product'=>$product])
                             )->stream();
                         }, $record->id . '.pdf');
-                    }), 
+                    }),
+                    Action::make('view_order')
+                    ->label("Visualizar")
+                    ->icon(Heroicon::Eye)
+
+                    ->modalSubmitAction(false)
+                    ->schema([ 
+                        Grid::make(2)
+                        ->schema([
+                        TextEntry::make('customer.name')
+                        ->label('Cliente'),
+                        TextEntry::make('cashier.name')
+                        ->label('Recibido por:'),
+
+                        TextEntry::make('total'),
+                        TextEntry::make('discount')
+                        ->columns(2)
+                        ->suffix('%'),
+                        TextEntry::make('subtotal'),
+                        TextEntry::make('products')
+                        ->state(function($record){
+                             $html = '<ul>';
+                        foreach ($record->details as $detail)
+                        {
+                        $product= Product::find($detail->product_id);
+                        $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";}
+                        $html .= '</ul>';
+                        return $html;})
+                        ->html(), ])]), 
+
+                    
+
 
 
             ])
