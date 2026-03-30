@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('subtotal', 10);
             $table->decimal('total', 10);
             $table->enum('status', ['Pending', 'Canceled', 'Ready', 'Completed'])->default('Completed');
+            $table->enum('type', ['in_store', 'delivery'])->default('in_store');
             $table->unsignedBigInteger('coupon_id')->nullable()->index('fk_customer_coupons');
             $table->integer('discount');
             $table->timestamps();

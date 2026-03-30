@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
 
@@ -44,6 +45,12 @@ class OrdersTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+
+            //Filtrar solo las ordenes que fueron hechas en caja
+            ->modifyQueryUsing(function (Builder $query) { 
+                return $query->where('type', 'in_store');  
+              })
+
             ->filters([
                 //
             ])
@@ -62,7 +69,7 @@ class OrdersTable
                         }, $record->id . '.pdf');
                     }),
                     Action::make('view_order')
-                    ->label("Visualizar")
+                    ->label("View")
                     ->icon(Heroicon::Eye)
 
                     ->modalSubmitAction(false)
