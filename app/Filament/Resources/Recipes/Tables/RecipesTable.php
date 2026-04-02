@@ -104,18 +104,17 @@ class RecipesTable
 
                             foreach ($supplies as $supply){
 
-                                //$supply->stock = $supply->stock - $details->amount;
                                 $supply->save();
                                 
                             }
 
                             
                             $product = Product::find($record->product_id);
-                            $product->stock = $product->stock+ $record->produced_quantity;
+                            $product->stock = $product->stock+ $record->produced_quantity*$data['amount']; //Correccion: faltaba data['amount']
                             $product->save();
 
                             $preparation_log = new PreparationLog();
-                            $preparation_log->user_id=auth()->id(); //En algunos IDE esto da error, pero no es así.
+                            $preparation_log->user_id=auth()->id(); //En algunos IDE esta linea da error, pero no es así.
                             $preparation_log->recipe_id= $record->id;
                             $preparation_log->produced_quantity = $record->produced_quantity;
                             $preparation_log->save();

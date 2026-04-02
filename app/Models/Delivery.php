@@ -19,16 +19,15 @@ class Delivery extends Model
         return $this->belongsTo(Order::class,'order_id');
     }
 
-      public function driver(): BelongsTo
+      public function driver(): BelongsTo //No cambiar el nombre
     {
-        return $this->belongsTo(Order::class,'user_id');
+        return $this->belongsTo(User::class,'user_id');
     }
 
 
     public function in_transit($query)
 {
     return $query->where('status', 'in_transit');
-    //Solo
 }
 
 

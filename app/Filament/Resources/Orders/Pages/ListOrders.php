@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Orders\Pages;
 
 use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Resources\Orders\Widgets\OrdersMetrics;
 use App\Models\Product;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\CreateAction;
@@ -21,9 +22,16 @@ class ListOrders extends ListRecords
     {
         return [
             CreateAction::make(),
+        ];
+    }
 
 
-            
+
+            protected function getHeaderWidgets(): array
+    {
+        return [
+         OrdersMetrics::class,
+         
 
         ];
     }

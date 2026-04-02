@@ -13,6 +13,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use League\CommonMark\Renderer\Inline\TextRenderer;
 use PhpParser\Node\Stmt\Label;
 
 class DeliveryForm
@@ -30,6 +31,7 @@ class DeliveryForm
                 ->label("Repartidor")
                 ->options(Driver::all()->pluck('name', 'id')),
 
+
             TextEntry::make('client')
             ->label("Cliente")
             ->state(function(Model $record,$set)//Nota personal. La variable siempre se tiene que definir commo $record para acceder al registro
@@ -39,23 +41,16 @@ class DeliveryForm
                 $html = '<ul>';
                 foreach ($order->details as $detail)
                     {
-                $product= Product::find($detail->product_id);
-                $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";
-                }
+                    $product= Product::find($detail->product_id);
+                    $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>"; }
                 $html .= '</ul>';
-
                  $set('phone',$customer->phone);
                  $set('details',$html);
 
-                return $customer->name;
-
-            }),
+                return $customer->name;}),
             
             TextEntry::make('phone')
-            ->label("Telefono"),
-
-           
-            
+                ->label("Telefono"),
             TextInput::make('address')
                     ->label("Dirección")
                     ->disabled()
