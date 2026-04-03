@@ -22,7 +22,4 @@ class Recipe extends Model
     {
         return $this->hasMany(RecipeSupply::class,'recipe_id');
     }
-
-
-
 }

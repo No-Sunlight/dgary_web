@@ -19,6 +19,7 @@ return new class extends Migration
             $table->decimal('price', 10);
             $table->decimal('stock', 10, 3);
             $table->integer('points');
+            $table->string('type')->nullable(); 
             $table->boolean('expire')->default(false);
             $table->boolean('status')->default(true);
             $table->timestamps();
