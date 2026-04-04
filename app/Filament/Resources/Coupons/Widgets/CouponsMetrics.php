@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Coupons\Widgets;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\CustomerCoupon;
+use Carbon\Carbon;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -25,6 +26,16 @@ class CouponsMetrics extends StatsOverviewWidget
              ->first();
          $coupon = Coupon::find($coupon_stats->coupon_id);    
 
+        //Metricas basadas en fecha
+         $startDate =Carbon::now()->startOfMonth();
+         $endDate = $startDate->copy()->endOfMonth();
+
+        $burnt_points = CustomerCoupon::where('created_at',1)->count();    
+
+
+
+
+        //Puntos 
 
 
         return [

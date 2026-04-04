@@ -15,6 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
@@ -36,16 +37,26 @@ class DeliveriesTable
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('created_at')
+                    ->label("Creada")
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label('Actualizada')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                ->options([
+                    'pending' => 'pending',
+                    'ready' => 'ready',
+                    'in_transit' => 'in_transit',
+                    'completed'=>'completed'
+                    ]),    
+
+
             ])
             ->recordActions([
 

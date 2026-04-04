@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Delivery;
 use App\Models\Order;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -16,6 +17,8 @@ class StatsOverview extends StatsOverviewWidget
     {
         return [
             Stat::make('Ordenes', Order::count()),
+            Stat::make('Pedidos en curso', Delivery::where('status','pending')->count()),
+
 
 
         ];

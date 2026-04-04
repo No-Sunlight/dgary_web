@@ -12,6 +12,9 @@ class Deliveries extends StatsOverviewWidget
 
     protected function getStats(): array
     {
+
+
+    
         return [
         Stat::make('Pedidos en curso', Delivery::count()),
 
