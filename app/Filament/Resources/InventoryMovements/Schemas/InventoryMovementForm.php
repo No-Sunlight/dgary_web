@@ -27,7 +27,7 @@ class InventoryMovementForm
                     ->label('Afecta a')
                     ->options([
                         'product' => 'Producto',
-                        'inventory' => 'Insumo',
+                        'supply' => 'Insumo',
                     ])
                     ->required()
                     ->reactive(),
@@ -40,7 +40,7 @@ class InventoryMovementForm
                 Select::make('supply_id')
                     ->label('Insumo')
                     ->options(Supply::pluck('name', 'id'))
-                    ->visible(fn($get) => $get('target') === 'inventory'),
+                    ->visible(fn($get) => $get('target') === 'supply'),
 
                 TextInput::make('quantity')
                     ->label('Cantidad')

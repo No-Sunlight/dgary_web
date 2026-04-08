@@ -8,16 +8,17 @@ class InventoryMovement extends Model
 {
      protected $fillable = [
         'type',
-        'inventory_id',
+        'supply_id',
         'product_id',
+        'production_id',
         'quantity',
         'direction',
         'reason'
     ];
 
-    public function inventory()
+    public function supply()
     {
-        return $this->belongsTo(Inventorie::class);
+        return $this->belongsTo(Supply::class);
     }
 
     public function product()

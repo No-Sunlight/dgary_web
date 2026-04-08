@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Purchases\Schemas;
 
-use App\Models\PurchaseSupply;
 use App\Models\supply;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -13,69 +12,101 @@ use Filament\Schemas\Components\Wizard;
 
 class PurchaseForm
 {
+    protected static function updateTotals($get, $set): void
+    {
+        $details = $get('../../details') ?? [];
+
+        $total = collect($details)
+            ->pluck('subtotal')
+            ->filter()
+            ->sum();
+
+        $set('../../preview_total', $total);
+    }
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-              Wizard::make([
-    Step::make('Compra: ')
-        ->schema([
-                TextInput::make('user_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('total')
-                    ->required()
-                    ->numeric(),
-        ]),//Compra Step
-    Step::make('details')
-    ->schema([
-    TextInput::make('preview_total')
-                ->numeric()
-                ->disabled()
-                ->live()
-                ->default(0)
-                ->prefix('$'),
-     Repeater::make('details')
-            ->relationship()
-            ->schema([
-             Select::make('supplies_id')
-            ->label('Insumo:')
-            ->options(supply::all()->pluck('name', 'id'))
-          // ->relationship('supplies', 'name')
+                Wizard::make([
+                    Step::make('Detalles')
+                        ->schema([
+                            TextInput::make('preview_total')
+                                ->numeric()
+                                ->disabled()
+                                ->live()
+                                ->default(0)
+                                ->prefix('$'),
+                            Repeater::make('details')
+                                ->relationship()
+                                ->schema([
+                                    Select::make('supplies_id')
+                                        ->label('Insumo:')
+                                        ->options(Supply::all()->pluck('name', 'id'))
+                                        ->required()
+                                        ->afterStateUpdated(function ($state, $get, $set) {
+                                            $supply = Supply::find($state);
 
-            ->required(),
-             TextInput::make('quantity')
-            ->label('Cantidad')
-            ->required(),
-            TextInput::make('Subtotal')
-            ->label('Subtotal')
-            ->required(),
-        ])//Repeater
-         ->addAction(function(  $get,  $set){
-                            $total =collect($get('details'))->pluck('subtotal')->sum();
-                            $set('preview_total',$total); //Deberiamos de tener un subtotal y total
-                            //No estoy muy seguro, una parte de mi dice que no es necesario puesto no creo
-                            $set('subtotal',$total);})
-                             ->collapsible()
+                                            $price = $supply?->price ?? 0;
 
-        ]),//Ingredientes comprados
+                                            $set('price', $price);
+                                            $set('stock_type', $supply?->stock_type ?? '');
 
+                                            // recalcular subtotal
+                                            $qty = $get('quantity') ?? 0;
+                                            $set('subtotal', $price * $qty);
 
-    Step::make("Confirmación")
+                                            // recalcular total
+                                            self::updateTotals($get, $set);
+                                        }),
+                                    TextInput::make('quantity')
+                                        ->label('Cantidad')
+                                        ->numeric()
+                                        ->required()
+                                        ->reactive()
+                                        ->afterStateUpdated(function ($get, $set) {
+                                            $price = $get('price') ?? 0;
+                                            $qty = $get('quantity') ?? 0;
 
-->afterValidation( function($get,$set){
-            $subtotal=$get('subtotal');
+                                            $set('subtotal', $price * $qty);
 
-                }
-            )
-
-    ->schema([
-            
-        ])
-
-
-])//Wizard
+                                            self::updateTotals($get, $set);
+                                        }),
+                                    TextInput::make('price')
+                                        ->label('Precio unitario')
+                                        ->numeric()
+                                        ->disabled()
+                                        ->dehydrated(),
+                                    TextInput::make('stock_type')
+                                        ->label('Unidad')
+                                        ->disabled(),
+                                    TextInput::make('subtotal')
+                                        ->label('Subtotal')
+                                        ->numeric()
+                                        ->required()
+                                        ->disabled()
+                                        ->dehydrated(),
+                                ])
+                                ->live()
+                                ->reactive()
+                                ->collapsible(),
+                        ]),
+                    Step::make('Resumen')
+                        ->schema([
+                            TextInput::make('preview_total')
+                                ->label('Total a pagar')
+                                ->disabled()
+                                ->prefix('$'),
+                        ]),
+                    Step::make('Confirmación')
+                        ->schema([
+                            TextInput::make('preview_total')
+                                ->label('Total a pagar')
+                                ->disabled()
+                                ->prefix('$'),
+                        ]),
+                ])//Wizard
+                    ->skippable(false)
+                    ->persistStepInQueryString()
             ]);//Componentes
-        
     }
 }

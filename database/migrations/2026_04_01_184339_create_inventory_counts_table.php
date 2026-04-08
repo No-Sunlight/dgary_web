@@ -12,15 +12,9 @@ return new class extends Migration {
     {
         Schema::create('inventory_counts', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('supply_id')->nullable()->constrained();
-            $table->foreignId('product_id')->nullable()->constrained();
-
-            $table->decimal('stock_system', 10, 2);
-            $table->decimal('stock_real', 10, 2);
-
-            $table->decimal('difference', 10, 2);
-
+            $table->enum('type', ['product', 'supply']); // qué estás inventariando
+            $table->boolean('applied')->default(false);
+            $table->timestamp('applied_at')->nullable();
             $table->timestamps();
         });
     }

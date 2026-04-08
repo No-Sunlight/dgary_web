@@ -7,6 +7,7 @@ use App\Filament\Resources\InventoryCounts\Pages\EditInventoryCount;
 use App\Filament\Resources\InventoryCounts\Pages\ListInventoryCounts;
 use App\Filament\Resources\InventoryCounts\Schemas\InventoryCountForm;
 use App\Filament\Resources\InventoryCounts\Tables\InventoryCountsTable;
+use App\Filament\Resources\InventoryCountResource\RelationManagers\ItemsRelationManager;
 use App\Models\InventoryCount;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -35,7 +36,7 @@ class InventoryCountResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ItemsRelationManager::class,
         ];
     }
 

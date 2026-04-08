@@ -4,7 +4,7 @@ namespace App\Filament\Resources\InventoryMovements\Pages;
 
 use App\Filament\Resources\InventoryMovements\InventoryMovementResource;
 use Filament\Resources\Pages\CreateRecord;
-use App\Models\ProductStock;
+use App\Models\Product;
 use App\Models\supply;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -19,9 +19,9 @@ class CreateInventoryMovement extends CreateRecord
 
             $data = $this->record;
 
-            // 🔹 PRODUCTO
+            // PRODUCTO
             if ($data->product_id) {
-                $stock = ProductStock::where('product_id', $data->product_id)->first();
+                $stock = Product::find($data->product_id);
 
                 if (!$stock) {
                     throw new Exception("No hay stock para este producto");

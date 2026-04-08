@@ -12,19 +12,13 @@ return new class extends Migration {
     {
         Schema::create('inventory_movements', function (Blueprint $table) {
             $table->id();
-
-            $table->string('type');
-            // compra, venta, produccion, merma, ajuste
-
+            $table->string('type'); // compra, venta, produccion, merma, ajuste
             $table->foreignId('supply_id')->nullable()->constrained();
             $table->foreignId('product_id')->nullable()->constrained();
-
+            $table->foreignId('production_id')->nullable()->constrained();
             $table->decimal('quantity', 10, 2);
-
             $table->string('direction'); // in / out
-
             $table->text('reason')->nullable();
-
             $table->timestamps();
         });
     }
