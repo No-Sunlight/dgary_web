@@ -34,8 +34,11 @@ Route::prefix('v1')->group(function () {
 
         // Órdenes
         Route::get('/orders', [OrderController::class, 'index']);
+        Route::get('/orders/active', [OrderController::class, 'active']);
         Route::get('/orders/{id}', [OrderController::class, 'show']);
+        Route::post('/orders/preview', [OrderController::class, 'preview']);
         Route::post('/orders', [OrderController::class, 'store']);
+        Route::post('/orders/{id}/reorder', [OrderController::class, 'reorder']);
         Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
 
         // Entregas y seguimiento
@@ -45,6 +48,7 @@ Route::prefix('v1')->group(function () {
         // Cupones
         Route::get('/coupons', [CouponController::class, 'index']);
         Route::get('/coupons/{id}', [CouponController::class, 'show']);
+        Route::post('/coupons/validate', [CouponController::class, 'validateCoupon']);
     });
 });
 

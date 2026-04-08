@@ -16,7 +16,7 @@ class Customer extends Model
 
        public function user_coupon(): HasMany
     {
-        return $this->hasMany(CustomerCoupon::class,'id_coupon');
+        return $this->hasMany(CustomerCoupon::class,'customer_id');
     }
 
         protected function casts(): array

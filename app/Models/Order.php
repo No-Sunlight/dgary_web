@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Delivery;
 
 class Order extends Model
 {
@@ -22,7 +23,7 @@ class Order extends Model
 
     public function deliveries(): HasMany
     {
-        return $this->hasMany(Order::class,'order_id');
+        return $this->hasMany(Delivery::class,'order_id');
 
     }
     
