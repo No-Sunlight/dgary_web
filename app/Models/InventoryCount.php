@@ -108,4 +108,49 @@ class InventoryCount extends Model
             throw new \Exception('No hay diferencias para aplicar.');
         }
     }
+
+    public function getTotalLossAttribute(): float
+    {
+        return $this->items->sum(function ($item) {
+
+            if ($item->stock_real === null)
+                return 0;
+
+            $diff = $item->stock_real - $item->stock_system;
+
+            if ($diff >= 0)
+                return 0;
+
+            $cost = $item->product
+                ? $item->product->price
+                : $item->supply?->price ?? 0;
+
+            return abs($diff) * $cost;
+        });
+    }
+
+    public function getTotalGainAttribute(): float
+    {
+        return $this->items->sum(function ($item) {
+
+            if ($item->stock_real === null)
+                return 0;
+
+            $diff = $item->stock_real - $item->stock_system;
+
+            if ($diff <= 0)
+                return 0;
+
+            $cost = $item->product
+                ? $item->product->price
+                : $item->supply?->price ?? 0;
+
+            return $diff * $cost;
+        });
+    }
+
+    public function getBalanceAttribute(): float
+    {
+        return $this->total_gain - $this->total_loss;
+    }
 }

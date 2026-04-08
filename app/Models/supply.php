@@ -19,16 +19,4 @@ class Supply extends Model
         {
                 return $this->hasMany(\App\Models\PurchaseSupply::class, 'supplies_id');
         }
-
-        public function getAverageCostAttribute(): float
-        {
-                $totalQuantity = $this->purchaseSupplies()->sum('quantity');
-                $totalCost = $this->purchaseSupplies()->sum('subtotal');
-
-                if ($totalQuantity == 0) {
-                        return 0;
-                }
-
-                return $totalCost / $totalQuantity;
-        }
 }

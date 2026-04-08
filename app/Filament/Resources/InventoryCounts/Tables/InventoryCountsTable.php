@@ -33,6 +33,23 @@ class InventoryCountsTable
                     ->badge()
                     ->formatStateUsing(fn($state) => $state ? 'Aplicado' : 'Pendiente')
                     ->color(fn($state) => $state ? 'success' : 'warning'),
+                TextColumn::make('total_loss')
+                    ->label('Pérdida')
+                    ->getStateUsing(fn($record) => '$' . number_format($record->total_loss, 2))
+                    ->color('danger'),
+
+                TextColumn::make('total_gain')
+                    ->label('Ganancia')
+                    ->getStateUsing(fn($record) => '$' . number_format($record->total_gain, 2))
+                    ->color('success'),
+
+                TextColumn::make('balance')
+                    ->label('Balance')
+                    ->getStateUsing(fn($record) => '$' . number_format($record->balance, 2))
+                    ->color(
+                        fn($record) =>
+                        $record->balance < 0 ? 'danger' : 'success'
+                    ),
             ])
             ->filters([
                 //

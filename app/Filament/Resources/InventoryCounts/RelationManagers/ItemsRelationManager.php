@@ -45,6 +45,38 @@ class ItemsRelationManager extends RelationManager
                         fn($state) =>
                         $state < 0 ? 'danger' : ($state > 0 ? 'success' : 'gray')
                     ),
+                TextColumn::make('impact')
+                    ->label('Impacto $')
+                    ->getStateUsing(function ($record) {
+
+                        // recalcular SIEMPRE
+                        if ($record->stock_real === null) {
+                            return '$0.00';
+                        }
+
+                        $diff = $record->stock_real - $record->stock_system;
+
+                        if ($diff == 0) {
+                            return '$0.00';
+                        }
+
+                        // obtener costo
+                        $cost = 0;
+
+                        if ($record->product) {
+                            $cost = $record->product->price;
+                        } elseif ($record->supply) {
+                            $cost = $record->supply->price;
+                        }
+
+                        $value = $diff * $cost;
+
+                        return '$' . number_format($value, 2);
+                    })
+                    ->color(
+                        fn($state) =>
+                        str_contains($state, '-') ? 'danger' : 'success'
+                    ),
             ])
             ->defaultSort('id');
     }

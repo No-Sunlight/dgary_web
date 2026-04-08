@@ -82,7 +82,7 @@ class InventoryMovementsTable
 
                         // SUPPLY
                         elseif ($record->supply) {
-                            $value = $record->supply->average_cost * $quantity;
+                            $value = $record->supply->price * $quantity;
                         } else {
                             return '$0';
                         }

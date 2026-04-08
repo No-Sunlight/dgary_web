@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Purchases\Pages;
 
 use App\Filament\Resources\Purchases\PurchaseResource;
+use App\Models\InventoryMovement;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreatePurchase extends CreateRecord
@@ -14,11 +15,24 @@ class CreatePurchase extends CreateRecord
         $total = $this->record->details()->sum('subtotal');
         $this->record->update(['total' => $total]);
 
-        // actualizar stock
         foreach ($this->record->details as $detail) {
             $supply = $detail->supply;
-            $supply->stock += $detail->quantity;
-            $supply->save();
+            if ($supply) {
+                // Actualizar stock
+                $supply->stock += $detail->quantity;
+                $supply->save();
+
+                // Registrar movimiento de inventario
+                InventoryMovement::create([
+                    'type' => 'purchase',              // tipo de movimiento
+                    'supply_id' => $supply->id,        // referencia al insumo
+                    'product_id' => null,              // no aplica
+                    'production_id' => null,           // no aplica
+                    'quantity' => $detail->quantity,   // cantidad comprada
+                    'direction' => 'in',               // entrada al inventario
+                    'reason' => 'Compra #' . $this->record->id, // opcional, referencia a la compra
+                ]);
+            }
         }
     }
 
