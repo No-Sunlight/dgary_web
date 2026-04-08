@@ -19,45 +19,42 @@ class RecipeForm
     {
         return $schema
             ->components([
-              Wizard::make([
-    Step::make('Tipo de receta: ')
-        ->schema([
-                TextInput::make('name')
-                    ->label("Nombre")
-                    ->required(),
-                Textarea::make('description')
-                    ->label("Descripción")
-                    ->required(),
-                Select::make('product_id')
-                    ->label("Producto a generar:")
-                 ->options(Product::all()->pluck('name', 'id'))
-                    ->required(),
-                TextInput::make('produced_quantity')
-                    ->label('Cantidad')
-                    ->required()
-                    ->label("Cantidad a generar (aprox)")
-                    //->prefix("Unida")
-                    ->numeric(),
-        ]),
-    Step::make('Ingredientes')
-    ->schema([
-     Repeater::make('details')
-                    ->relationship()
-        ->schema([
-             Select::make('supply_id')
-            ->label('Insumo')
-            ->options(supply::all()->pluck('name', 'id'))
-            ->required(),
-             TextInput::make('amount')
-            ->label('Cantidad')
-            ->required(),
-            
-        ])//Repeater
+                Wizard::make([
+                    Step::make('Tipo de receta: ')
+                        ->schema([
+                            Select::make('product_id')
+                                ->label("Producto a generar:")
+                                ->options(Product::all()->pluck('name', 'id'))
+                                ->required(),
+                            Textarea::make('description')
+                                ->label("Descripción")
+                                ->required(),
+                            TextInput::make('produced_quantity')
+                                ->label('Cantidad')
+                                ->required()
+                                ->label("Cantidad a generar (aprox)")
+                                //->prefix("Unida")
+                                ->numeric(),
+                        ]),
+                    Step::make('Ingredientes')
+                        ->schema([
+                            Repeater::make('details')
+                                ->relationship()
+                                ->schema([
+                                    Select::make('supply_id')
+                                        ->label('Insumo')
+                                        ->options(supply::all()->pluck('name', 'id'))
+                                        ->required(),
+                                    TextInput::make('amount')
+                                        ->label('Cantidad')
+                                        ->required(),
 
-        ]),//Ingredientes
+                                ])//Repeater
 
-])//Wizard
-           ->columnSpanFull()
+                        ]),//Ingredientes
+
+                ])//Wizard
+                    ->columnSpanFull()
 
             ]);//Componentes
     }

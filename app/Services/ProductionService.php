@@ -1,44 +1,54 @@
-<?
+<?php
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\ProductStock;
 use App\Models\Recipe;
-use App\Models\Supply;
+use App\Models\InventoryMovement;
 use Illuminate\Support\Facades\DB;
-use Exception;
 
 class ProductionService
 {
-    public function produce(int $productId, int $quantity): void
+    public static function produce(int $recipeId, float $quantity): void
     {
-        DB::transaction(function () use ($productId, $quantity) {
+        DB::transaction(function () use ($recipeId, $quantity) {
 
-            $recipe = Recipe::where('product_id', $productId)->firstOrFail();
+            $recipe = Recipe::with('details.supply', 'product')->findOrFail($recipeId);
+
+            $product = $recipe->product;
 
             $factor = $quantity / $recipe->produced_quantity;
 
-            foreach ($recipe->supplies as $item) {
+            // DESCONTAR INSUMOS
+            foreach ($recipe->details as $detail) {
 
-                $required = $item->quantity * $factor;
+                $supply = $detail->supply;
+                $consume = $detail->amount * $factor;
 
-                $supply = $item->supply;
-
-                if ($supply->stock < $required) {
-                    throw new Exception("Stock insuficiente de {$supply->name}");
+                if ($supply->stock < $consume) {
+                    throw new \Exception("Stock insuficiente para {$supply->name}");
                 }
 
-                $supply->decrement('stock', $required);
+                $supply->decrement('stock', $consume);
+
+                InventoryMovement::create([
+                    'type' => 'produccion',
+                    'supply_id' => $supply->id,
+                    'quantity' => $consume,
+                    'direction' => 'out',
+                    'reason' => 'Consumo por producción',
+                ]);
             }
 
-            // aumentar producto terminado
-            $stock = ProductStock::firstOrCreate(
-                ['product_id' => $productId],
-                ['stock' => 0]
-            );
+            // AUMENTAR PRODUCTO
+            $product->increment('stock', $quantity);
 
-            $stock->increment('stock', $quantity);
+            InventoryMovement::create([
+                'type' => 'produccion',
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+                'direction' => 'in',
+                'reason' => 'Producción realizada',
+            ]);
         });
     }
 }

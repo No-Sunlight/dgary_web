@@ -6,6 +6,7 @@ use App\Models\PreparationLog;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\supply;
+use App\Services\ProductionService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -26,7 +27,8 @@ class RecipesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
+                TextColumn::make('product.name')
+                    ->label('Receta')
                     ->searchable(),
                 TextColumn::make('description')
                     ->searchable(),
@@ -55,78 +57,58 @@ class RecipesTable
             ->recordActions([
                 EditAction::make(),
                 ViewAction::make(),
-                 Action::make('prepare_recipe') 
+                Action::make('prepare_recipe')
                     ->label('Preparar')
                     ->color('success')
                     ->icon(Heroicon::RocketLaunch)
                     ->modalHeading('¿Seguro de querer hacer esta preparación?')
-                    ->modalDescription('Las preparaciones deben de registrarse UNA VEZ CONCLUIDAS')
+                    ->modalDescription('Las preparaciones deben registrarse UNA VEZ CONCLUIDAS')
                     ->schema([
+
                         Select::make('amount')
-                        ->label('¿Cuantos lotes desea registrar?')
-                        ->options([
-                            '1' => 'Un Lote (1x)',
-                            '2' => 'Dos Lotes (2x)',
-                            '3' => 'Tres Lotes (3x)',
-                            '4' => 'Cuatro Lotes (4x)',
-                                ])
-                        ->live()
-                        //->default('1')
-                        ->afterStateUpdated(function(Model $record,$state,$set){ 
-                        $set('lote',$state*$record->produced_quantity);})
-                        ->required(),
-                        TextEntry::make('lote')
+                            ->label('¿Cuántos lotes deseas producir?')
+                            ->options([
+                                '1' => '1 Lote',
+                                '2' => '2 Lotes',
+                                '3' => '3 Lotes',
+                                '4' => '4 Lotes',
+                            ])
+                            ->required()
                             ->live()
-                            ->default("0")
-                            ->label('Cantidad Aproximada Creada'),
-                        ])
-                    ->action(function (Model $record,array $data) {
-                            $receta = Recipe::with('details')->find($record->id);        
+                            ->afterStateUpdated(function ($state, $set, $record) {
+                                $set('lote', $state * $record->produced_quantity);
+                            }),
 
-                            $supplies = [];
+                        TextInput::make('lote')
+                            ->label('Cantidad a producir')
+                            ->disabled()
+                            ->dehydrated(false),
 
-                            foreach ($receta->details as $details)
-                                {
-                                    $supply = supply::find($details->supply_id);
-                                    if($supply->stock< ($details->amount*$data['amount'])){
-                                            Notification::make("Failure")
-                                            ->title('Insumos insuficientes: '.$supply->name)
-                                            ->danger()
-                                            ->send();
-                                            return;
-                                    }else{
-                                        $supply->stock = $supply->stock - ($details->amount*$data['amount']);
-                                        array_push($supplies,$supply);
+                    ])
+                    ->action(function ($record, array $data) {
 
-                                    }
-                                }
+                        try {
 
+                            $quantity = $data['amount'] * $record->produced_quantity;
 
-                            foreach ($supplies as $supply){
+                            ProductionService::produce(
+                                $record->id,
+                                $quantity
+                            );
 
-                                //$supply->stock = $supply->stock - $details->amount;
-                                $supply->save();
-                                
-                            }
+                            Notification::make()
+                                ->title('Producción realizada correctamente')
+                                ->success()
+                                ->send();
 
-                            
-                            $product = Product::find($record->product_id);
-                            $product->stock = $product->stock+ $record->produced_quantity;
-                            $product->save();
+                        } catch (\Exception $e) {
 
-                            $preparation_log = new PreparationLog();
-                            $preparation_log->user_id=auth()->id(); //En algunos IDE esto da error, pero no es así.
-                            $preparation_log->recipe_id= $record->id;
-                            $preparation_log->produced_quantity = $record->produced_quantity;
-                            $preparation_log->save();
-
-                            Notification::make("Success")
-                            ->title('Saved')
-                            ->success()
-                            ->send();
-                    
-
-                    }), 
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
