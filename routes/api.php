@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\CouponController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\WebhookController;
 
 /**
  * API v1 - Rutas públicas (sin autenticación)
@@ -16,6 +18,9 @@ Route::prefix('v1')->group(function () {
     // Autenticación
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Webhooks (sin autenticación - validados por firma Stripe)
+    Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripeWebhook']);
 
     /**
      * Rutas protegidas (requieren token)
@@ -49,6 +54,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/coupons', [CouponController::class, 'index']);
         Route::get('/coupons/{id}', [CouponController::class, 'show']);
         Route::post('/coupons/validate', [CouponController::class, 'validateCoupon']);
+
+        // Pagos
+        Route::post('/orders/{orderId}/payment/intent', [PaymentController::class, 'createPaymentIntent']);
+        Route::post('/orders/{orderId}/payment/confirm', [PaymentController::class, 'confirmPayment']);
+        Route::get('/orders/{orderId}/payment/status', [PaymentController::class, 'getPaymentStatus']);
+        Route::post('/orders/{orderId}/payment/refund', [PaymentController::class, 'refundPayment']);
+        
+        // Métodos de pago guardados (billetera)
+        Route::get('/payment-methods', [PaymentController::class, 'getPaymentMethods']);
     });
 });
 
