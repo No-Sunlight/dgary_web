@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class RecipeSupply extends Model
 {
+        protected $fillable = ['recipe_id', 'supply_id', 'quantity'];
+
         protected $guarded = [];
 
+        public function supply()
+        {
+                return $this->belongsTo(Supply::class);
+        }
 }

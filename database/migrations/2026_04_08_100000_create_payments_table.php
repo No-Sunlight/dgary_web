@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('order_id')->nullable();
             $table->unsignedBigInteger('customer_id');
             
             // Stripe IDs

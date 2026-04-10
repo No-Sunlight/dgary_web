@@ -21,13 +21,14 @@ class PurchasesTable
                     ->sortable(),
                 TextColumn::make('total')
                     ->numeric()
+                    ->formatStateUsing(fn($state) => '$' .' '. number_format($state, 2))
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->label('Fecha')
-                   // ->toggleable(isToggledHiddenByDefault: true),
-                   ,
+                // ->toggleable(isToggledHiddenByDefault: true),
+                ,
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()

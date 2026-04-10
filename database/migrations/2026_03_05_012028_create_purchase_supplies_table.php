@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('supplies_id')->index('purchase_supplies_supplies_id_foreign');
             $table->unsignedBigInteger('purchase_id')->index('purchase_supplies_id_foreign_key_purchase');
             $table->decimal('quantity');
+            $table->decimal('price', 10, 2);
             $table->decimal('subtotal');
             $table->timestamps();
         });

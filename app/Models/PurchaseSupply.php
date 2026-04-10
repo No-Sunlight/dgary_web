@@ -8,4 +8,9 @@ class PurchaseSupply extends Model
 {
        protected $guarded = [];
 
+       public function supply()
+       {
+              return $this->belongsTo(Supply::class, 'supplies_id');
+       }
+
 }

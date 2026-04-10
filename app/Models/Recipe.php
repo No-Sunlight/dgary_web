@@ -10,19 +10,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Recipe extends Model
 {
-        protected $guarded = [];
+    protected $guarded = [];
 
-    
-   public function product(): BelongsTo
+
+    public function product()
     {
-        return $this->belongsTo(Product::class,'product_id');
+        return $this->belongsTo(Product::class);
     }
 
-       public function details(): HasMany
+    public function details()
     {
-        return $this->hasMany(RecipeSupply::class,'recipe_id');
+        return $this->hasMany(\App\Models\RecipeSupply::class, 'recipe_id');
     }
-
-
-
 }
