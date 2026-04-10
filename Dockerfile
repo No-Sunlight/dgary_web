@@ -1,7 +1,12 @@
+FROM composer:latest AS composer_builder
+
 FROM dunglas/frankenphp:latest
 
 # Install additional PHP extensions required by dependencies
 RUN install-php-extensions intl zip
+
+# Copy composer from builder
+COPY --from=composer_builder /usr/bin/composer /usr/bin/composer
 
 # Copy application
 WORKDIR /app
