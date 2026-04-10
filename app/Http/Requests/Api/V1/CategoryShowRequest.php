@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Http\Requests\Api\V1;
+
+class CategoryShowRequest extends ApiFormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'id' => ['required', 'integer', 'exists:categories,id'],
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'id' => $this->route('id'),
+        ]);
+    }
+}

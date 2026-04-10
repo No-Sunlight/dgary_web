@@ -24,6 +24,19 @@ class Payment extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $payment): void {
+            if ($payment->payment_method === 'stripe') {
+                $payment->payment_method = 'card';
+            }
+
+            if (is_string($payment->payment_method)) {
+                $payment->payment_method = strtolower($payment->payment_method);
+            }
+        });
+    }
+
     /**
      * Scope para pagos exitosos
      */

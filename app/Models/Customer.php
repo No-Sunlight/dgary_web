@@ -9,22 +9,21 @@ class Customer extends Model
 {
     protected $guarded = [];
 
-       public function order(): HasMany
+    public function order(): HasMany
     {
         return $this->hasMany(Order::class);
     }
 
-       public function user_coupon(): HasMany
+    public function user_coupon(): HasMany
     {
         return $this->hasMany(CustomerCoupon::class,'customer_id');
     }
 
-        protected function casts(): array
+    protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
-
 }

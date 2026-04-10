@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\CouponValidateRequest;
+use App\Http\Resources\Api\V1\CouponResource;
+use App\Http\Resources\Api\V1\CouponValidationResource;
 use App\Models\CustomerCoupon;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class CouponController extends Controller
 {
@@ -20,7 +22,8 @@ class CouponController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $coupons,
+            'success' => true,
+            'data' => CouponResource::collection($coupons),
             'message' => 'Cupones disponibles',
         ], 200);
     }
@@ -37,13 +40,16 @@ class CouponController extends Controller
 
         if (!$coupon) {
             return response()->json([
+                'success' => false,
+                'data' => null,
                 'message' => 'Cupón no encontrado',
                 'errors' => ['coupon' => ['El cupón solicitado no existe']],
             ], 404);
         }
 
         return response()->json([
-            'data' => $coupon,
+            'success' => true,
+            'data' => new CouponResource($coupon),
             'message' => 'Cupón obtenido',
         ], 200);
     }
@@ -51,48 +57,41 @@ class CouponController extends Controller
     /**
      * Validar cupón y calcular descuento sobre un subtotal
      */
-    public function validateCoupon(Request $request)
+    public function validateCoupon(CouponValidateRequest $request)
     {
-        try {
-            $validated = $request->validate([
-                'coupon_id' => 'required|integer',
-                'subtotal' => 'required|numeric|min:0',
-            ]);
+        $validated = $request->validated();
 
-            $coupon = CustomerCoupon::where('id', $validated['coupon_id'])
-                ->where('customer_id', $request->user()->id)
-                ->where('status', 1)
-                ->with('coupons')
-                ->first();
+        $coupon = CustomerCoupon::where('id', $validated['coupon_id'])
+            ->where('customer_id', $request->user()->id)
+            ->where('status', 1)
+            ->with('coupons')
+            ->first();
 
-            if (!$coupon) {
-                return response()->json([
-                    'message' => 'Cupón no disponible',
-                    'errors' => ['coupon_id' => ['El cupón no pertenece al cliente o ya fue utilizado']],
-                ], 404);
-            }
-
-            $subtotal = (float) $validated['subtotal'];
-            $discountPercent = (int) $coupon->discount;
-            $discountAmount = round(($subtotal * $discountPercent) / 100, 2);
-            $total = max(round($subtotal - $discountAmount, 2), 0);
-
+        if (!$coupon) {
             return response()->json([
-                'data' => [
-                    'coupon_id' => $coupon->id,
-                    'coupon_name' => $coupon->coupons?->name,
-                    'discount_percent' => $discountPercent,
-                    'subtotal' => $subtotal,
-                    'discount_amount' => $discountAmount,
-                    'total' => $total,
-                ],
-                'message' => 'Cupón válido',
-            ], 200);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validación fallida',
-                'errors' => $e->errors(),
-            ], 422);
+                'success' => false,
+                'data' => null,
+                'message' => 'Cupón no disponible',
+                'errors' => ['coupon_id' => ['El cupón no pertenece al cliente o ya fue utilizado']],
+            ], 404);
         }
+
+        $subtotal = (float) $validated['subtotal'];
+        $discountPercent = (int) $coupon->discount;
+        $discountAmount = round(($subtotal * $discountPercent) / 100, 2);
+        $total = max(round($subtotal - $discountAmount, 2), 0);
+
+        return response()->json([
+            'success' => true,
+            'data' => new CouponValidationResource([
+                'coupon_id' => $coupon->id,
+                'coupon_name' => $coupon->coupons?->name,
+                'discount_percent' => $discountPercent,
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'total' => $total,
+            ]),
+            'message' => 'Cupón válido',
+        ], 200);
     }
 }

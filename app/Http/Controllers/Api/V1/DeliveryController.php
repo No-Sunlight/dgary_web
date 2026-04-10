@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\DeliveryShowRequest;
+use App\Http\Resources\Api\V1\DeliveryResource;
 use App\Models\Delivery;
 use Illuminate\Http\Request;
 
@@ -11,7 +13,7 @@ class DeliveryController extends Controller
     /**
      * Obtener estado de entrega de una orden
      */
-    public function show($orderId, Request $request)
+    public function show(DeliveryShowRequest $request, int $orderId)
     {
         $delivery = Delivery::where('order_id', $orderId)
             ->whereHas('orders', function ($query) use ($request) {
@@ -21,13 +23,16 @@ class DeliveryController extends Controller
 
         if (!$delivery) {
             return response()->json([
+                'success' => false,
+                'data' => null,
                 'message' => 'Entrega no encontrada',
                 'errors' => ['delivery' => ['No existe información de entrega para esta orden']],
             ], 404);
         }
 
         return response()->json([
-            'data' => $delivery,
+            'success' => true,
+            'data' => new DeliveryResource($delivery),
             'message' => 'Información de entrega',
         ], 200);
     }
@@ -45,7 +50,8 @@ class DeliveryController extends Controller
         ->get();
 
         return response()->json([
-            'data' => $deliveries,
+            'success' => true,
+            'data' => DeliveryResource::collection($deliveries),
             'message' => 'Entregas en tránsito',
         ], 200);
     }

@@ -8,12 +8,52 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Stripe\Stripe;
+use Stripe\Customer as StripeCustomer;
 use Stripe\PaymentIntent;
 use Stripe\SetupIntent;
 use Stripe\PaymentMethod;
 
 class PaymentController extends Controller
 {
+    private function getOrCreateStripeCustomerId($customer): string
+    {
+        if (!empty($customer->stripe_customer_id)) {
+            return $customer->stripe_customer_id;
+        }
+
+        $stripeCustomer = StripeCustomer::create([
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'metadata' => [
+                'app_customer_id' => (string) $customer->id,
+            ],
+        ]);
+
+        $customer->stripe_customer_id = $stripeCustomer->id;
+        $customer->save();
+
+        return $stripeCustomer->id;
+    }
+
+    private function extractStripePaymentMethodId(?array $stripeResponse): ?string
+    {
+        if (!$stripeResponse) {
+            return null;
+        }
+
+        $fromRoot = $stripeResponse['payment_method'] ?? null;
+        if (is_string($fromRoot) && $fromRoot !== '') {
+            return $fromRoot;
+        }
+
+        $fromCharge = $stripeResponse['charges']['data'][0]['payment_method'] ?? null;
+        if (is_string($fromCharge) && $fromCharge !== '') {
+            return $fromCharge;
+        }
+
+        return null;
+    }
+
     public function __construct()
     {
         // Inicializar Stripe con clave secreta
@@ -27,9 +67,12 @@ class PaymentController extends Controller
     private function createWalletCardIntent(Request $request)
     {
         try {
+            $stripeCustomerId = $this->getOrCreateStripeCustomerId($request->user());
+
             // Crear SetupIntent (NO cobra nada, solo guarda la tarjeta)
             $setupIntent = SetupIntent::create([
                 'payment_method_types' => ['card'],
+                'customer' => $stripeCustomerId,
                 'metadata' => [
                     'operation' => 'add_card_to_wallet',
                     'customer_id' => $request->user()->id,
@@ -44,7 +87,7 @@ class PaymentController extends Controller
                 'customer_id' => $request->user()->id,
                 'stripe_payment_intent_id' => $setupIntent->id, // Guardamos setup intent ID
                 'amount' => 0, // Sin cargo
-                'currency' => 'USD',
+                'currency' => 'MXN',
                 'status' => 'pending',
                 'stripe_response' => $setupIntent->toArray(),
             ]);
@@ -55,7 +98,7 @@ class PaymentController extends Controller
                     'stripe_payment_intent_id' => $setupIntent->id,
                     'client_secret' => $setupIntent->client_secret,
                     'amount' => 0,
-                    'currency' => 'usd',
+                    'currency' => 'mxn',
                     'is_setup_intent' => true, // Indicador para el cliente
                 ],
                 'message' => 'Setup intent creado para agregar tarjeta (sin cobro)',
@@ -100,13 +143,16 @@ class PaymentController extends Controller
                 ], 404);
             }
 
-            // Validar que la orden esté lista para pago
-            if (!in_array($order->status, ['Pending', 'Ready'])) {
+            // Validar que la orden esté lista para pago (compatibilidad case-insensitive)
+            $normalizedOrderStatus = strtolower((string) $order->status);
+            if (!in_array($normalizedOrderStatus, ['pending', 'ready'], true)) {
                 return response()->json([
                     'message' => 'La orden no puede ser pagada en este momento',
                     'errors' => ['status' => ['Estado de orden inválido para pago']],
                 ], 409);
             }
+
+            $stripeCustomerId = $this->getOrCreateStripeCustomerId($request->user());
 
             // Verificar si ya existe un payment intent pendiente
             $existingPayment = Payment::where('order_id', $orderId)
@@ -117,16 +163,23 @@ class PaymentController extends Controller
                 // Recuperar intent existente
                 try {
                     $intent = PaymentIntent::retrieve($existingPayment->stripe_payment_intent_id);
+                    $expectedAmount = (int) ($order->total * 100);
+                    $intentCurrency = strtolower((string) $intent->currency);
 
-                    return response()->json([
-                        'data' => [
-                            'payment_id' => $existingPayment->id,
-                            'client_secret' => $intent->client_secret,
-                            'amount' => (int) ($order->total * 100), // En centavos para Stripe
-                            'currency' => 'mxn',
-                        ],
-                        'message' => 'Payment intent recuperado',
-                    ], 200);
+                    if ((int) $intent->amount !== $expectedAmount || $intentCurrency !== 'mxn') {
+                        $existingPayment->delete();
+                    } else {
+                        return response()->json([
+                            'data' => [
+                                'payment_id' => $existingPayment->id,
+                                'stripe_payment_intent_id' => $existingPayment->stripe_payment_intent_id,
+                                'client_secret' => $intent->client_secret,
+                                'amount' => $expectedAmount,
+                                'currency' => 'mxn',
+                            ],
+                            'message' => 'Payment intent recuperado',
+                        ], 200);
+                    }
                 } catch (\Exception $e) {
                     // Si expiró o no existe, crear uno nuevo
                     $existingPayment->delete();
@@ -137,6 +190,7 @@ class PaymentController extends Controller
             $intent = PaymentIntent::create([
                 'amount' => (int) ($order->total * 100), // Convertir a centavos
                 'currency' => 'mxn',
+                'customer' => $stripeCustomerId,
                 'metadata' => [
                     'order_id' => $order->id,
                     'customer_id' => $request->user()->id,
@@ -358,7 +412,7 @@ class PaymentController extends Controller
 
                     // Actualizar estado de orden
                     $order->update([
-                        'status' => 'Ready', // O 'Completed' según tu flujo
+                        'status' => 'Ready',
                     ]);
 
                     return response()->json([
@@ -421,6 +475,144 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al confirmar pago',
+                'errors' => ['payment' => [$e->getMessage()]],
+            ], 500);
+        }
+    }
+
+    /**
+     * Cobrar una orden con una tarjeta ya guardada en Stripe
+     * POST /api/v1/orders/{id}/payment/use-saved
+     */
+    public function payWithSavedCard($orderId, Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'payment_method_id' => 'required|string',
+            ]);
+
+            $order = Order::where('id', $orderId)
+                ->where('customer_id', $request->user()->id)
+                ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'message' => 'Orden no encontrada',
+                    'errors' => ['order' => ['La orden solicitada no existe']],
+                ], 404);
+            }
+
+            $normalizedOrderStatus = strtolower((string) $order->status);
+            if (!in_array($normalizedOrderStatus, ['pending', 'ready'], true)) {
+                return response()->json([
+                    'message' => 'La orden no puede ser pagada en este momento',
+                    'errors' => ['status' => ['Estado de orden inválido para pago']],
+                ], 409);
+            }
+
+            $stripeCustomerId = $this->getOrCreateStripeCustomerId($request->user());
+
+            $stripePaymentMethod = PaymentMethod::retrieve($validated['payment_method_id']);
+            $paymentMethodCustomer = null;
+            if (is_string($stripePaymentMethod->customer)) {
+                $paymentMethodCustomer = $stripePaymentMethod->customer;
+            } elseif (is_object($stripePaymentMethod->customer) && isset($stripePaymentMethod->customer->id)) {
+                $paymentMethodCustomer = $stripePaymentMethod->customer->id;
+            }
+
+            if (empty($paymentMethodCustomer)) {
+                try {
+                    $stripePaymentMethod->attach(['customer' => $stripeCustomerId]);
+                } catch (\Stripe\Exception\InvalidRequestException $e) {
+                    return response()->json([
+                        'message' => 'La tarjeta guardada no puede reutilizarse automáticamente',
+                        'errors' => ['payment' => ['Tarjeta legacy no adjuntable. Usa "Pagar con nueva tarjeta" para volver a guardarla.']],
+                    ], 409);
+                }
+            } elseif ($paymentMethodCustomer !== $stripeCustomerId) {
+                return response()->json([
+                    'message' => 'La tarjeta no pertenece al cliente actual',
+                    'errors' => ['payment' => ['La tarjeta seleccionada no está vinculada a tu cuenta']],
+                ], 409);
+            }
+
+            $intent = PaymentIntent::create([
+                'amount' => (int) ($order->total * 100),
+                'currency' => 'mxn',
+                'customer' => $stripeCustomerId,
+                'payment_method' => $validated['payment_method_id'],
+                'confirm' => true,
+                'off_session' => true,
+                'metadata' => [
+                    'order_id' => $order->id,
+                    'customer_id' => $request->user()->id,
+                    'customer_name' => $request->user()->name,
+                    'flow' => 'saved_card',
+                ],
+                'description' => "Pago Orden #{$order->id} - tarjeta guardada",
+            ]);
+
+            $charge = $intent->charges->data[0] ?? null;
+
+            $payment = Payment::create([
+                'order_id' => $order->id,
+                'customer_id' => $request->user()->id,
+                'stripe_payment_intent_id' => $intent->id,
+                'stripe_charge_id' => $charge?->id,
+                'amount' => $order->total,
+                'currency' => 'MXN',
+                'status' => $intent->status === 'succeeded' ? 'succeeded' : ($intent->status === 'processing' ? 'processing' : 'failed'),
+                'payment_method' => $charge?->payment_method_details?->type ?? 'card',
+                'card_last_four' => $charge?->payment_method_details?->card?->last4,
+                'card_brand' => $charge?->payment_method_details?->card?->brand,
+                'stripe_response' => $intent->toArray(),
+                'paid_at' => $intent->status === 'succeeded' ? now() : null,
+                'error_message' => $intent->last_payment_error?->message,
+            ]);
+
+            if ($intent->status === 'succeeded') {
+                $order->update(['status' => 'Ready']);
+
+                return response()->json([
+                    'data' => [
+                        'payment_id' => $payment->id,
+                        'status' => 'succeeded',
+                        'order_status' => $order->status,
+                        'amount_paid' => $payment->amount,
+                    ],
+                    'message' => 'Pago exitoso con tarjeta guardada',
+                ], 200);
+            }
+
+            if ($intent->status === 'processing') {
+                return response()->json([
+                    'data' => [
+                        'payment_id' => $payment->id,
+                        'status' => 'processing',
+                        'order_status' => $order->status,
+                        'amount_paid' => 0,
+                    ],
+                    'message' => 'Pago en proceso',
+                ], 202);
+            }
+
+            return response()->json([
+                'message' => 'No se pudo cobrar con esta tarjeta guardada',
+                'errors' => ['payment' => [$intent->last_payment_error?->message ?? "Estado: {$intent->status}"]],
+            ], 402);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validación fallida',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            return response()->json([
+                'message' => 'Error de Stripe',
+                'errors' => ['stripe' => [$e->getMessage()]],
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al cobrar tarjeta guardada',
                 'errors' => ['payment' => [$e->getMessage()]],
             ], 500);
         }
@@ -561,12 +753,18 @@ class PaymentController extends Controller
             $cardMap = [];
 
             foreach ($payments as $payment) {
+                $paymentMethodId = $this->extractStripePaymentMethodId($payment->stripe_response);
+                if (empty($paymentMethodId)) {
+                    continue;
+                }
+
                 $cardKey = $payment->card_brand . '-' . $payment->card_last_four;
 
                 if (!isset($cardMap[$cardKey])) {
                     $cardMap[$cardKey] = [
                         'payment_id' => $payment->id,
                         'stripe_charge_id' => $payment->stripe_charge_id,
+                        'stripe_payment_method_id' => $paymentMethodId,
                         'card_brand' => ucfirst($payment->card_brand ?? 'Unknown'),
                         'card_last_four' => $payment->card_last_four,
                         'card_display' => ucfirst($payment->card_brand ?? 'Card') . ' •••• ' . $payment->card_last_four,
@@ -581,6 +779,9 @@ class PaymentController extends Controller
                         $cardMap[$cardKey]['last_used'],
                         $payment->paid_at
                     );
+                    if (empty($cardMap[$cardKey]['stripe_payment_method_id']) && !empty($paymentMethodId)) {
+                        $cardMap[$cardKey]['stripe_payment_method_id'] = $paymentMethodId;
+                    }
                 }
             }
 
@@ -596,6 +797,45 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al obtener tarjetas',
+                'errors' => ['payment' => [$e->getMessage()]],
+            ], 500);
+        }
+    }
+
+    /**
+     * Limpiar tarjetas legacy no reutilizables del usuario autenticado
+     * POST /api/v1/payment-methods/cleanup
+     */
+    public function cleanupLegacyPaymentMethods(Request $request)
+    {
+        try {
+            $customerId = $request->user()->id;
+
+            $payments = Payment::where('customer_id', $customerId)
+                ->where('status', 'succeeded')
+                ->whereNull('order_id')
+                ->whereNotNull('card_last_four')
+                ->whereNotNull('card_brand')
+                ->get();
+
+            $deleted = 0;
+            foreach ($payments as $payment) {
+                $paymentMethodId = $this->extractStripePaymentMethodId($payment->stripe_response);
+                if (empty($paymentMethodId)) {
+                    $payment->delete();
+                    $deleted++;
+                }
+            }
+
+            return response()->json([
+                'data' => [
+                    'deleted' => $deleted,
+                ],
+                'message' => 'Limpieza de tarjetas legacy completada',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al limpiar tarjetas legacy',
                 'errors' => ['payment' => [$e->getMessage()]],
             ], 500);
         }

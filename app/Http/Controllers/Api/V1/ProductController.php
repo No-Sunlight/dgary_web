@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ProductShowRequest;
+use App\Http\Resources\Api\V1\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -13,9 +15,15 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = $request->query('per_page', 15);
-        $categoryId = $request->query('category_id');
-        $search = $request->query('search');
+        $validated = $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $perPage = $validated['per_page'] ?? 15;
+        $categoryId = $validated['category_id'] ?? null;
+        $search = $validated['search'] ?? null;
 
         $query = Product::with('category')->whereNull('deleted_at');
 
@@ -29,19 +37,9 @@ class ProductController extends Controller
 
         $products = $query->paginate($perPage);
 
-        $normalized = collect($products->items())->map(function (Product $product) {
-            return [
-                'id' => $product->id,
-                'name' => $product->name,
-                'category' => $product->category?->name,
-                'price' => (float) $product->price,
-                'estimatedTime' => '10-25 min Estimación',
-                'imageUrl' => $product->image,
-            ];
-        })->values();
-
         return response()->json([
-            'data' => $normalized,
+            'success' => true,
+            'data' => ProductResource::collection($products->items()),
             'meta' => [
                 'total' => $products->total(),
                 'per_page' => $products->perPage(),
@@ -55,7 +53,7 @@ class ProductController extends Controller
     /**
      * Obtener detalles de un producto
      */
-    public function show($id)
+    public function show(ProductShowRequest $request, int $id)
     {
         $product = Product::where('id', $id)
             ->whereNull('deleted_at')
@@ -64,20 +62,16 @@ class ProductController extends Controller
 
         if (!$product) {
             return response()->json([
+                'success' => false,
+                'data' => null,
                 'message' => 'Producto no encontrado',
                 'errors' => ['product' => ['El producto solicitado no existe']],
             ], 404);
         }
 
         return response()->json([
-            'data' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'category' => $product->category?->name,
-                'price' => (float) $product->price,
-                'estimatedTime' => '10-25 min Estimación',
-                'imageUrl' => $product->image,
-            ],
+            'success' => true,
+            'data' => new ProductResource($product),
             'message' => 'Producto obtenido',
         ], 200);
     }

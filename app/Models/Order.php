@@ -11,26 +11,39 @@ class Order extends Model
 {
     protected $guarded = [];
 
-      public function customer(): BelongsTo
+    protected $casts = [
+        'subtotal' => 'float',
+        'discount' => 'float',
+        'delivery_fee' => 'float',
+        'tax' => 'float',
+        'total' => 'float',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class,'customer_id');
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-   public function details(): HasMany
+    public function details(): HasMany
     {
-        return $this->hasMany(OrderDetail::class,'order_id');
+        return $this->hasMany(OrderDetail::class, 'order_id');
     }
 
     public function deliveries(): HasMany
     {
-        return $this->hasMany(Delivery::class,'order_id');
-
+        return $this->hasMany(Delivery::class, 'order_id');
     }
-    
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'order_id');
+    }
+
     public function cashier(): BelongsTo
     {
-        return $this->belongsTo(User::class,'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
-
-
 }
+

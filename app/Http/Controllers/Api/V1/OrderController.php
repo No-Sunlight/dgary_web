@@ -3,229 +3,236 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\CustomerCoupon;
-use App\Models\User;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderDetail;
-use App\Models\Delivery;
+use App\Models\Payment;
 use App\Models\Product;
+use App\Services\OrderCalculationService;
+use App\Services\OrderValidationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Stripe\PaymentIntent;
+use Stripe\Stripe;
 
 class OrderController extends Controller
 {
-    /**
-     * Listar órdenes del cliente autenticado
-     */
-    public function index(Request $request)
-    {
-        $perPage = $request->query('per_page', 10);
-        $status = $request->query('status');
-
-        $query = Order::where('customer_id', $request->user()->id);
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        $orders = $query->with(['details', 'deliveries'])
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
-
-        return response()->json([
-            'data' => $orders->items(),
-            'meta' => [
-                'total' => $orders->total(),
-                'per_page' => $orders->perPage(),
-                'current_page' => $orders->currentPage(),
-                'last_page' => $orders->lastPage(),
-            ],
-            'message' => 'Órdenes obtenidas',
-        ], 200);
+    public function __construct(
+        private OrderCalculationService $calculationService,
+        private OrderValidationService $validationService
+    ) {
+        Stripe::setApiKey(config('services.stripe.secret'));
     }
 
-    /**
-     * Obtener la orden activa del cliente
-     */
-    public function active(Request $request)
-    {
-        $activeOrder = Order::where('customer_id', $request->user()->id)
-            ->whereIn('status', ['Pending', 'Ready'])
-            ->with(['details', 'deliveries'])
-            ->latest('created_at')
-            ->first();
-
-        return response()->json([
-            'data' => $activeOrder,
-            'message' => $activeOrder ? 'Orden activa obtenida' : 'No hay orden activa',
-        ], 200);
-    }
-
-    /**
-     * Obtener detalles de una orden
-     */
-    public function show($id, Request $request)
-    {
-        $order = Order::where('id', $id)
-            ->where('customer_id', $request->user()->id)
-            ->with(['details', 'deliveries'])
-            ->first();
-
-        if (!$order) {
-            return response()->json([
-                'message' => 'Orden no encontrada',
-                'errors' => ['order' => ['La orden solicitada no existe']],
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => $order,
-            'message' => 'Orden obtenida',
-        ], 200);
-    }
-
-    /**
-     * Crear nueva orden (checkout)
-     */
-    public function store(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required|integer|exists:products,id',
-                'items.*.quantity' => 'required|numeric|min:1',
-                'coupon_id' => 'nullable|integer',
-                'type' => 'required|in:in_store,delivery',
-                'delivery_address' => 'required_if:type,delivery|string|max:255',
-            ]);
-
-            $customer = $request->user();
-            $summary = $this->calculateSummary(
-                $customer->id,
-                $validated['items'],
-                $validated['coupon_id'] ?? null
-            );
-
-            $order = DB::transaction(function () use ($validated, $customer, $summary) {
-                $order = Order::create([
-                    'customer_id' => $customer->id,
-                    'subtotal' => $summary['subtotal'],
-                    'total' => $summary['total'],
-                    'discount' => $summary['discount_percent'],
-                    'coupon_id' => $summary['coupon_id'],
-                    'status' => 'Pending',
-                    'type' => $validated['type'],
-                ]);
-
-                foreach ($summary['items'] as $item) {
-                    OrderDetail::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item['product_id'],
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
-                        'subtotal' => $item['subtotal'],
-                    ]);
-                }
-
-                if ($validated['type'] === 'delivery') {
-                    $defaultDriverId = User::query()->value('id');
-
-                    if (!$defaultDriverId) {
-                        throw ValidationException::withMessages([
-                            'delivery' => ['No hay repartidor disponible para asignar la entrega'],
-                        ]);
-                    }
-
-                    Delivery::create([
-                        'order_id' => $order->id,
-                        'user_id' => $defaultDriverId,
-                        'address' => $validated['delivery_address'],
-                        'status' => 'pending',
-                        'total' => $summary['total'],
-                    ]);
-                }
-
-                if ($summary['coupon']) {
-                    $summary['coupon']->update(['status' => 0]);
-                }
-
-                return $order;
-            });
-
-            return response()->json([
-                'data' => $order->load(['details', 'deliveries']),
-                'message' => 'Orden creada exitosamente',
-            ], 201);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validación fallida',
-                'errors' => $e->errors(),
-            ], 422);
-        }
-    }
-
-    /**
-     * Previsualizar una orden antes del checkout
-     */
     public function preview(Request $request)
     {
         try {
             $validated = $request->validate([
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
-                'items.*.quantity' => 'required|numeric|min:1',
-                'coupon_id' => 'nullable|integer',
+                'items.*.quantity' => 'required|integer|min:1|max:99',
+                'coupon_id' => 'nullable|string|exists:coupons,code',
             ]);
 
-            $summary = $this->calculateSummary(
-                $request->user()->id,
+            $this->validationService->validateItems($validated['items']);
+
+            $calculation = $this->calculationService->getOrderCalculation(
                 $validated['items'],
                 $validated['coupon_id'] ?? null
             );
 
+            if (($validated['coupon_id'] ?? null) !== null) {
+                $this->validationService->validateCoupon(
+                    $validated['coupon_id'],
+                    $calculation['subtotal']
+                );
+            }
+
             return response()->json([
-                'data' => [
-                    'items' => $summary['items'],
-                    'subtotal' => $summary['subtotal'],
-                    'discount_percent' => $summary['discount_percent'],
-                    'discount_amount' => $summary['discount_amount'],
-                    'total' => $summary['total'],
-                    'coupon_id' => $summary['coupon_id'],
-                ],
-                'message' => 'Resumen de orden obtenido',
+                'success' => true,
+                'data' => $calculation,
+                'message' => 'Preview de orden generado',
             ], 200);
-        } catch (ValidationException $e) {
+        } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Validación fallida',
-                'errors' => $e->errors(),
+                'success' => false,
+                'data' => null,
+                'message' => 'No se pudo generar preview',
+                'errors' => ['order' => [$e->getMessage()]],
             ], 422);
         }
     }
 
-    /**
-     * Repetir una orden anterior
-     */
+    public function store(Request $request)
+    {
+        try {
+            return \DB::transaction(function () use ($request) {
+                $validated = $request->validate([
+                    'items' => 'required|array|min:1',
+                    'items.*.product_id' => 'required|integer|exists:products,id',
+                    'items.*.quantity' => 'required|integer|min:1|max:99',
+                    'coupon_id' => 'nullable|string|exists:coupons,code',
+                    'notes' => 'nullable|string|max:500',
+                ]);
+                $customerId = $request->user()->id;
+
+                $this->validationService->validate(
+                    $validated['items'],
+                    $validated['coupon_id'] ?? null
+                );
+
+                $calculation = $this->calculationService->getOrderCalculation(
+                    $validated['items'],
+                    $validated['coupon_id'] ?? null
+                );
+
+                $order = Order::create([
+                    'customer_id' => $customerId,
+                    'status' => 'Pending',
+                    'subtotal' => $calculation['subtotal'],
+                    'discount' => $calculation['discount_amount'],
+                    'delivery_fee' => $calculation['delivery_fee'],
+                    'tax' => $calculation['tax'],
+                    'total' => $calculation['total'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+
+                foreach ($validated['items'] as $item) {
+                    $product = Product::findOrFail($item['product_id']);
+
+                    OrderDetail::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->id,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $product->price,
+                        'subtotal' => $product->price * $item['quantity'],
+                    ]);
+                }
+
+                if (($validated['coupon_id'] ?? null) !== null) {
+                    $coupon = Coupon::where('code', $validated['coupon_id'])->first();
+                    if ($coupon) {
+                        $coupon->customers()->attach($customerId, [
+                            'order_id' => $order->id,
+                            'used_at' => now(),
+                        ]);
+                    }
+                }
+
+                $paymentIntent = PaymentIntent::create([
+                    'amount' => (int) ($order->total * 100),
+                    'currency' => 'mxn',
+                    'metadata' => [
+                        'order_id' => $order->id,
+                        'customer_id' => $customerId,
+                    ],
+                ]);
+
+                $payment = Payment::create([
+                    'order_id' => $order->id,
+                    'customer_id' => $customerId,
+                    'amount' => $order->total,
+                    'status' => 'pending',
+                    'payment_method' => 'card',
+                    'stripe_payment_intent_id' => $paymentIntent->id,
+                    'stripe_client_secret' => $paymentIntent->client_secret,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                    'id' => $order->id,
+                    'status' => $order->status,
+                    'subtotal' => $order->subtotal,
+                    'discount' => $order->discount,
+                    'delivery_fee' => $order->delivery_fee,
+                    'tax' => $order->tax,
+                    'total' => $order->total,
+                    'payment_id' => $payment->id,
+                    'payment_intent_id' => $paymentIntent->id,
+                    'client_secret' => $paymentIntent->client_secret,
+                    ],
+                    'message' => 'Orden creada exitosamente',
+                ], 201);
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'data' => null,
+                'message' => 'No se pudo crear la orden',
+                'errors' => ['order' => [$e->getMessage()]],
+            ], 422);
+        }
+    }
+
+    public function index(Request $request)
+    {
+        try {
+            $query = Order::where('customer_id', $request->user()->id)
+                ->with('details.product');
+
+            if ($request->has('status')) {
+                $query->where('status', $request->get('status'));
+            }
+
+            $orders = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $orders->items(),
+                'meta' => [
+                    'total' => $orders->total(),
+                    'per_page' => $orders->perPage(),
+                    'current_page' => $orders->currentPage(),
+                    'last_page' => $orders->lastPage(),
+                ],
+                'message' => 'Órdenes obtenidas',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'data' => null,
+                'message' => 'Error fetching orders',
+                'errors' => ['order' => [$e->getMessage()]],
+            ], 500);
+        }
+    }
+
+    public function active(Request $request)
+    {
+        try {
+            $order = Order::where('customer_id', $request->user()->id)
+                ->whereIn('status', ['Pending', 'Ready'])
+                ->with('details.product', 'payments')
+                ->latest('created_at')
+                ->first();
+
+            return response()->json(['data' => $order], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error fetching active order'], 500);
+        }
+    }
+
+    public function show($id, Request $request)
+    {
+        try {
+            $order = Order::with('details.product', 'payments')
+                ->where('id', $id)
+                ->where('customer_id', $request->user()->id)
+                ->firstOrFail();
+
+            return response()->json(['data' => $order], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+    }
+
     public function reorder($id, Request $request)
     {
         try {
-            $validated = $request->validate([
-                'type' => 'sometimes|in:in_store,delivery',
-                'delivery_address' => 'required_if:type,delivery|string|max:255',
-                'coupon_id' => 'nullable|integer',
-            ]);
-
             $originalOrder = Order::where('id', $id)
                 ->where('customer_id', $request->user()->id)
-                ->with(['details', 'deliveries'])
-                ->first();
-
-            if (!$originalOrder) {
-                return response()->json([
-                    'message' => 'Orden no encontrada',
-                    'errors' => ['order' => ['La orden solicitada no existe']],
-                ], 404);
-            }
+                ->with('details')
+                ->firstOrFail();
 
             $items = $originalOrder->details->map(function ($detail) {
                 return [
@@ -234,176 +241,58 @@ class OrderController extends Controller
                 ];
             })->values()->all();
 
-            $summary = $this->calculateSummary(
-                $request->user()->id,
-                $items,
-                $validated['coupon_id'] ?? null
-            );
+            $this->validationService->validateItems($items);
 
-            $type = $validated['type'] ?? $originalOrder->type;
-            $deliveryAddress = $validated['delivery_address']
-                ?? optional($originalOrder->deliveries->first())->address
-                ?? $request->user()->address;
+            $calculation = $this->calculationService->getOrderCalculation($items);
 
-            if ($type === 'delivery' && !$deliveryAddress) {
-                return response()->json([
-                    'message' => 'Dirección requerida para entrega',
-                    'errors' => ['delivery_address' => ['Debes enviar una dirección para pedidos a domicilio']],
-                ], 422);
-            }
-
-            $newOrder = DB::transaction(function () use ($request, $summary, $type, $deliveryAddress) {
+            $newOrder = \DB::transaction(function () use ($request, $items, $calculation) {
                 $order = Order::create([
                     'customer_id' => $request->user()->id,
-                    'subtotal' => $summary['subtotal'],
-                    'total' => $summary['total'],
-                    'discount' => $summary['discount_percent'],
-                    'coupon_id' => $summary['coupon_id'],
                     'status' => 'Pending',
-                    'type' => $type,
+                    'subtotal' => $calculation['subtotal'],
+                    'discount' => $calculation['discount_amount'],
+                    'delivery_fee' => $calculation['delivery_fee'],
+                    'tax' => $calculation['tax'],
+                    'total' => $calculation['total'],
                 ]);
 
-                foreach ($summary['items'] as $item) {
+                foreach ($items as $item) {
+                    $product = Product::findOrFail($item['product_id']);
+
                     OrderDetail::create([
                         'order_id' => $order->id,
-                        'product_id' => $item['product_id'],
+                        'product_id' => $product->id,
                         'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
-                        'subtotal' => $item['subtotal'],
+                        'unit_price' => $product->price,
+                        'subtotal' => $product->price * $item['quantity'],
                     ]);
-                }
-
-                if ($type === 'delivery') {
-                    $defaultDriverId = User::query()->value('id');
-
-                    if (!$defaultDriverId) {
-                        throw ValidationException::withMessages([
-                            'delivery' => ['No hay repartidor disponible para asignar la entrega'],
-                        ]);
-                    }
-
-                    Delivery::create([
-                        'order_id' => $order->id,
-                        'user_id' => $defaultDriverId,
-                        'address' => $deliveryAddress,
-                        'status' => 'pending',
-                        'total' => $summary['total'],
-                    ]);
-                }
-
-                if ($summary['coupon']) {
-                    $summary['coupon']->update(['status' => 0]);
                 }
 
                 return $order;
             });
 
-            return response()->json([
-                'data' => $newOrder->load(['details', 'deliveries']),
-                'message' => 'Orden repetida exitosamente',
-            ], 201);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validación fallida',
-                'errors' => $e->errors(),
-            ], 422);
+            return response()->json(['data' => $newOrder], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         }
     }
 
-    /**
-     * Cancelar una orden
-     */
     public function destroy($id, Request $request)
     {
-        $order = Order::where('id', $id)
-            ->where('customer_id', $request->user()->id)
-            ->first();
+        try {
+            $order = Order::where('id', $id)
+                ->where('customer_id', $request->user()->id)
+                ->firstOrFail();
 
-        if (!$order) {
-            return response()->json([
-                'message' => 'Orden no encontrada',
-                'errors' => ['order' => ['La orden no existe']],
-            ], 404);
-        }
-
-        if (!in_array($order->status, ['Pending', 'Ready'])) {
-            return response()->json([
-                'message' => 'No se puede cancelar esta orden',
-                'errors' => ['status' => ["No se pueden cancelar órdenes con estado {$order->status}"]],
-            ], 409);
-        }
-
-        $order->update(['status' => 'Canceled']);
-
-        return response()->json([
-            'data' => $order,
-            'message' => 'Orden cancelada',
-        ], 200);
-    }
-
-    private function calculateSummary(int $customerId, array $payloadItems, ?int $couponId): array
-    {
-        $items = [];
-        $subtotal = 0;
-
-        foreach ($payloadItems as $item) {
-            $product = Product::find($item['product_id']);
-
-            if (!$product) {
-                throw ValidationException::withMessages([
-                    'items' => ["El producto {$item['product_id']} no existe"],
-                ]);
+            if (!in_array(strtolower((string) $order->status), ['pending', 'ready'], true)) {
+                return response()->json(['error' => 'Cannot cancel order in current status'], 422);
             }
 
-            if ($product->stock < $item['quantity']) {
-                throw ValidationException::withMessages([
-                    'stock' => ["El producto {$product->name} no tiene suficiente stock"],
-                ]);
-            }
+            $order->update(['status' => 'Canceled']);
 
-            $lineSubtotal = (float) $product->price * (float) $item['quantity'];
-            $subtotal += $lineSubtotal;
-
-            $items[] = [
-                'product_id' => (int) $product->id,
-                'name' => $product->name,
-                'quantity' => (int) $item['quantity'],
-                'unit_price' => (float) $product->price,
-                'subtotal' => (float) $lineSubtotal,
-            ];
+            return response()->json(['data' => $order], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error cancelling order'], 422);
         }
-
-        $coupon = null;
-        $discountPercent = 0;
-        $couponReferenceId = null;
-
-        if ($couponId) {
-            $coupon = CustomerCoupon::where('id', $couponId)
-                ->where('customer_id', $customerId)
-                ->where('status', 1)
-                ->first();
-
-            if (!$coupon) {
-                throw ValidationException::withMessages([
-                    'coupon_id' => ['Cupón inválido, vencido o no disponible para este cliente'],
-                ]);
-            }
-
-            $discountPercent = (int) $coupon->discount;
-            $couponReferenceId = $coupon->id;
-        }
-
-        $discountAmount = round(($subtotal * $discountPercent) / 100, 2);
-        $total = max(round($subtotal - $discountAmount, 2), 0);
-
-        return [
-            'items' => $items,
-            'subtotal' => round($subtotal, 2),
-            'discount_percent' => $discountPercent,
-            'discount_amount' => $discountAmount,
-            'total' => $total,
-            'coupon' => $coupon,
-            'coupon_id' => $couponReferenceId,
-        ];
     }
 }

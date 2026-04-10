@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\CategoryShowRequest;
+use App\Http\Resources\Api\V1\CategoryDetailResource;
+use App\Http\Resources\Api\V1\CategoryResource;
 use App\Models\Category;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -16,7 +18,8 @@ class CategoryController extends Controller
         $categories = Category::all();
 
         return response()->json([
-            'data' => $categories,
+            'success' => true,
+            'data' => CategoryResource::collection($categories),
             'message' => 'Categorías obtenidas exitosamente',
         ], 200);
     }
@@ -24,19 +27,22 @@ class CategoryController extends Controller
     /**
      * Obtener una categoría con sus productos
      */
-    public function show($id)
+    public function show(CategoryShowRequest $request, int $id)
     {
-        $category = Category::with('Products')->find($id);
+        $category = Category::with('Products.category')->find($id);
 
         if (!$category) {
             return response()->json([
+                'success' => false,
+                'data' => null,
                 'message' => 'Categoría no encontrada',
                 'errors' => ['category' => ['La categoría solicitada no existe']],
             ], 404);
         }
 
         return response()->json([
-            'data' => $category,
+            'success' => true,
+            'data' => new CategoryDetailResource($category),
             'message' => 'Categoría obtenida',
         ], 200);
     }

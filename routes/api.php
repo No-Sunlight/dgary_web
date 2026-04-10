@@ -53,16 +53,19 @@ Route::prefix('v1')->group(function () {
         // Cupones
         Route::get('/coupons', [CouponController::class, 'index']);
         Route::get('/coupons/{id}', [CouponController::class, 'show']);
+        Route::post('/validate', [CouponController::class, 'validateCoupon']);
         Route::post('/coupons/validate', [CouponController::class, 'validateCoupon']);
 
         // Pagos
         Route::post('/orders/{orderId}/payment/intent', [PaymentController::class, 'createPaymentIntent']);
         Route::post('/orders/{orderId}/payment/confirm', [PaymentController::class, 'confirmPayment']);
+        Route::post('/orders/{orderId}/payment/use-saved', [PaymentController::class, 'payWithSavedCard']);
         Route::get('/orders/{orderId}/payment/status', [PaymentController::class, 'getPaymentStatus']);
         Route::post('/orders/{orderId}/payment/refund', [PaymentController::class, 'refundPayment']);
         
         // Métodos de pago guardados (billetera)
         Route::get('/payment-methods', [PaymentController::class, 'getPaymentMethods']);
+        Route::post('/payment-methods/cleanup', [PaymentController::class, 'cleanupLegacyPaymentMethods']);
     });
 });
 
