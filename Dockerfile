@@ -2,7 +2,13 @@ FROM composer:latest AS composer_builder
 
 FROM dunglas/frankenphp:latest
 
-# Install additional PHP extensions required by dependencies
+# Install Node.js and additional PHP extensions
+RUN apt-get update && apt-get install -y \
+    curl gnupg ca-certificates && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN install-php-extensions intl zip
 
 # Copy composer from builder
@@ -12,10 +18,10 @@ COPY --from=composer_builder /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY . .
 
-# Install dependencies
+# Install PHP dependencies
 RUN composer install --optimize-autoloader --no-scripts --no-interaction
 
-# Build assets
+# Install and build Node assets
 RUN npm ci && npm run build
 
 # Create necessary directories
