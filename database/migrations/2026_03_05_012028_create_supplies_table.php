@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('supplies', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
+            $table->decimal('price', 10, 2);
             $table->string('description');
             $table->decimal('stock');
             $table->enum('stock_type', ['liters', 'kilograms', 'units']);
