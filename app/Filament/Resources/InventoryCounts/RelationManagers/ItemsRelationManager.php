@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\InventoryCountResource\RelationManagers;
+namespace App\Filament\Resources\InventoryCounts\RelationManagers;
 
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
