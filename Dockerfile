@@ -26,13 +26,23 @@ RUN npm ci && npm run build
 
 # Create necessary directories
 RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs bootstrap/cache && \
-    chmod -R a+rw storage
+    chmod -R a+rw storage bootstrap/cache
 
-# Cache Laravel configs
+# Clear all caches first
+RUN php artisan cache:clear || true && \
+    php artisan config:clear || true && \
+    php artisan view:clear || true && \
+    php artisan route:clear || true
+
+# Regenerate caches for production
 RUN php artisan config:cache && \
-    php artisan event:cache && \
     php artisan route:cache && \
-    php artisan view:cache
+    php artisan view:cache && \
+    php artisan event:cache
+
+# Set permissions
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
+    chmod -R 775 /app/storage /app/bootstrap/cache
 
 EXPOSE 8000
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
