@@ -8,6 +8,8 @@ use App\Models\InventoryCount;
 class InventoryLossChart extends ChartWidget
 {
     protected ?string $heading = 'Pérdidas por inventario';
+    protected static ?int $sort = 4;
+    protected int | string | array $columnSpan = 1;
 
     protected function getData(): array
     {

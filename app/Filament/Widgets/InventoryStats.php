@@ -8,8 +8,12 @@ use App\Models\InventoryCount;
 
 class InventoryStats extends BaseWidget
 {
+        protected static ?int $sort = 4;
+        protected int | string | array $columnSpan = 'full';
+
     protected function getStats(): array
     {
+        
         $count = InventoryCount::with('items.product', 'items.supply')
             ->latest()
             ->first();
