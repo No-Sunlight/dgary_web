@@ -34,12 +34,6 @@ RUN php artisan cache:clear || true && \
     php artisan view:clear || true && \
     php artisan route:clear || true
 
-# Regenerate caches for production
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan event:cache
-
 # Set permissions
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
     chmod -R 775 /app/storage /app/bootstrap/cache
