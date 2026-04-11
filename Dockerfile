@@ -42,4 +42,4 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
     chmod -R 775 /app/storage /app/bootstrap/cache
 
 EXPOSE 8000
-CMD ["frankenphp", "run", "--addr", "0.0.0.0:8000"]
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
