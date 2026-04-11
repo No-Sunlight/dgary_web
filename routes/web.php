@@ -8,5 +8,5 @@ Route::get('/health', [HealthController::class, 'check'])->withoutMiddleware('we
 Route::get('/debug', [HealthController::class, 'debug'])->withoutMiddleware('web');
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/admin/login');
 })->name('home');
