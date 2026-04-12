@@ -3,17 +3,28 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
+use Filament\Panel;
 
 
-class User extends Authenticatable
+
+class User extends Authenticatable  implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles;
+
+   public function canAccessPanel(Panel $panel): bool
+    {
+return $this->roles()->exists();
+    }
+
+
 
     /**
      * The attributes that are mass assignable.
@@ -35,6 +46,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    
 
     /**
      * Get the attributes that should be cast.
