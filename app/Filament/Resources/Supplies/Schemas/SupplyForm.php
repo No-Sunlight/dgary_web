@@ -19,6 +19,12 @@ class SupplyForm
                 TextInput::make('stock')
                     ->required()
                     ->numeric(),
+                TextInput::make('price')
+                    ->numeric()
+                    ->prefix('$')
+                    ->step(0.01) 
+                    ->required()
+                    ->minValue(0),
                 Select::make('stock_type')
                     ->options(['liters' => 'Liters', 'kilograms' => 'Kilograms', 'units' => 'Units'])
                     ->required(),

@@ -13,6 +13,7 @@ class Supply extends Model
                 'description',
                 'stock',
                 'stock_type',
+                'price'
         ];
 
         public function purchaseSupplies()
