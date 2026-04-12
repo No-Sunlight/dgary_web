@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Delivery;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Payment;
@@ -72,6 +73,9 @@ class OrderController extends Controller
                     'items.*.quantity' => 'required|integer|min:1|max:99',
                     'coupon_id' => 'nullable|string|exists:coupons,code',
                     'notes' => 'nullable|string|max:500',
+                    'address' => 'nullable|string|max:255',
+                    'destination_lat' => 'nullable|numeric',
+                    'destination_lng' => 'nullable|numeric',
                 ]);
                 $customerId = $request->user()->id;
 
@@ -88,6 +92,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $customerId,
                     'status' => 'Pending',
+                    'type' => 'delivery',
                     'subtotal' => $calculation['subtotal'],
                     'discount' => $calculation['discount_amount'],
                     'delivery_fee' => $calculation['delivery_fee'],
@@ -117,6 +122,19 @@ class OrderController extends Controller
                         ]);
                     }
                 }
+
+                Delivery::firstOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => null,
+                        'address' => $validated['address'] ?? 'Dirección pendiente',
+                        'destination_lat' => $validated['destination_lat'] ?? null,
+                        'destination_lng' => $validated['destination_lng'] ?? null,
+                        'status' => 'pending',
+                        'notes' => $validated['notes'] ?? null,
+                        'total' => $order->total,
+                    ]
+                );
 
                 $paymentIntent = PaymentIntent::create([
                     'amount' => (int) ($order->total * 100),
@@ -249,6 +267,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $request->user()->id,
                     'status' => 'Pending',
+                    'type' => 'delivery',
                     'subtotal' => $calculation['subtotal'],
                     'discount' => $calculation['discount_amount'],
                     'delivery_fee' => $calculation['delivery_fee'],
@@ -267,6 +286,17 @@ class OrderController extends Controller
                         'subtotal' => $product->price * $item['quantity'],
                     ]);
                 }
+
+                Delivery::firstOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => null,
+                        'address' => 'Dirección pendiente',
+                        'status' => 'pending',
+                        'notes' => null,
+                        'total' => $order->total,
+                    ]
+                );
 
                 return $order;
             });
