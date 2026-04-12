@@ -9,6 +9,29 @@ class Delivery extends Model
 {
      protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Delivery $delivery): void {
+            $order = $delivery->order;
+
+            if (!$order) {
+                return;
+            }
+
+            $mappedOrderStatus = match ($delivery->status) {
+                'pending' => 'Pending',
+                'ready', 'in_transit' => 'Ready',
+                'completed' => 'Completed',
+                'canceled', 'refund' => 'Canceled',
+                default => null,
+            };
+
+            if ($mappedOrderStatus !== null && $order->status !== $mappedOrderStatus) {
+                $order->update(['status' => $mappedOrderStatus]);
+            }
+        });
+    }
+
     protected $casts = [
         'destination_lat' => 'float',
         'destination_lng' => 'float',
