@@ -11,6 +11,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 
 
@@ -35,6 +37,8 @@ return $this->roles()->exists();
         'name',
         'email',
         'password',
+        'vehicle',
+        'license_plate',
     ];
 
     /**
@@ -72,5 +76,13 @@ return $this->roles()->exists();
             ->take(2)
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
+    }
+
+    /**
+     * Entregas asignadas al driver
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(Delivery::class, 'user_id');
     }
 }

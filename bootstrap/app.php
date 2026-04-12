@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->alias([
             'api.token' => \App\Http\Middleware\ValidateApiToken::class,
+            'api.driver.token' => \App\Http\Middleware\ValidateDriverApiToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
