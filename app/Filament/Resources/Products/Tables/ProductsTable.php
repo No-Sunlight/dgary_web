@@ -26,8 +26,7 @@ class ProductsTable
                     ->sortable(),
                     ImageColumn::make('image')
                         ->disk('public')
-                        ->circular()
-                        ,
+                        ->circular(),
                 TextColumn::make('price')
                     ->money()
                     ->sortable(),

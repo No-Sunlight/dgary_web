@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Purchases\Schemas;
 
-use App\Models\supply;
+use App\Models\Supply;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Coupons\Schemas;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class CouponForm
 {
@@ -27,8 +28,13 @@ class CouponForm
                     ->required()
                     ->integer()
                     ->prefix('$'),
-                Toggle::make('status')
-                    ->required(),
+                TextInput::make('code')  
+                ->required()
+                ->unique(ignoreRecord: true)
+                ->default(fn () => 'CPN-' . strtoupper(Str::random(6)))
+                ->readOnly('edit'),
+            Toggle::make('status')
+                ->required(),
             ]);
     }
 }

@@ -148,7 +148,7 @@ Step::make('Información del cliente')
                 // dd($productName);
                     
                   //  $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
-                   $string.= "Producto: {$productName} Cantidad: {$quantity}";
+                   $string.= "Producto: {$productName} Cantidad: {$quantity} \n";
                 }
                 //$html .= '</ul>';
 

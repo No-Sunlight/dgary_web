@@ -9,8 +9,12 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\InventoryCountItem;
 
 class TopLossItems extends TableWidget
+
 {
     protected static ?string $heading = 'Top items con mayor pérdida';
+    protected static ?int $sort = 5;
+protected int | string | array $columnSpan = 'full';
+
 
     public function table(Table $table): Table
     {

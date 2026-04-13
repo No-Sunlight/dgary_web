@@ -4,26 +4,53 @@ namespace App\Filament\Widgets;
 
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Carbon;
 
 class ChartsOverview extends ChartWidget
 {
     protected ?string $heading = 'Ventas';
 
-    protected static ?int $sort = 2;
-
+    protected static ?int $sort = 3;
 
     protected function getData(): array
     {
-      $data=  Order::all();
+        //Inicializar 
+        $data = collect();
+        $labels = collect();
+
+
+        for ($i = 2; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthName = $date->format('M'); // 'Jan', 'Feb', 'Mar', etc.
+            
+            $labels->push($monthName);
+            $data->put($monthName, 0); 
+        }
+
+        $orders = Order::whereBetween('created_at', [
+            now()->subMonths(2)->startOfMonth(),
+            now()->endOfMonth(),
+        ])->get();
+
+        $groupedOrders = $orders->groupBy(function ($order) {
+            return $order->created_at->format('M');
+        });
+
+        foreach ($groupedOrders as $month => $records) {
+            if ($data->has($month)) {
+                $data[$month] = $records->count(); 
+
+            }
+        }
 
         return [
             'datasets' => [
                 [
                     'label' => 'Ventas por mes',
-                    'data' => [0, 10, 5, 2, 21, 32, 45, 74, 65, 45, 77, 89],
+                    'data' => $data->values()->toArray(),
                 ],
             ],
-            'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'labels' => $labels->toArray(),
         ];
     }
 

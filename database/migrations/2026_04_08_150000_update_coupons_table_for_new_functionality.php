@@ -18,9 +18,9 @@ return new class extends Migration
             }
             
             // Cambiar nombre de columna discount a discount_percent si existe
-            if (Schema::hasColumn('coupons', 'discount') && !Schema::hasColumn('coupons', 'discount_percent')) {
-                $table->renameColumn('discount', 'discount_percent');
-            }
+            // if (Schema::hasColumn('coupons', 'discount') && !Schema::hasColumn('coupons', 'discount_percent')) {
+            //     $table->renameColumn('discount', 'discount_percent');
+            // }
             
             // Agregar is_active si no existe
             if (!Schema::hasColumn('coupons', 'is_active')) {
@@ -57,10 +57,10 @@ return new class extends Migration
         Schema::table('coupons', function (Blueprint $table) {
             $table->dropColumnIfExists(['code', 'is_active', 'expires_at', 'minimum_purchase', 'uses_count', 'used_count']);
             
-            // Revertir renombramiento si ocurrió
-            if (Schema::hasColumn('coupons', 'discount_percent') && !Schema::hasColumn('coupons', 'discount')) {
-                $table->renameColumn('discount_percent', 'discount');
-            }
+            // // Revertir renombramiento si ocurrió
+            // if (Schema::hasColumn('coupons', 'discount_percent') && !Schema::hasColumn('coupons', 'discount')) {
+            //     $table->renameColumn('discount_percent', 'discount');
+            // }
         });
     }
 };

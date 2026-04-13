@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Delivery;
+use App\Models\Driver;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\OrderCalculationService;
 use App\Services\OrderValidationService;
 use Illuminate\Http\Request;
@@ -21,6 +24,28 @@ class OrderController extends Controller
         private OrderValidationService $validationService
     ) {
         Stripe::setApiKey(config('services.stripe.secret'));
+    }
+
+    /**
+     * Permite operar en entornos donde deliveries.user_id siga como NOT NULL.
+     */
+    private function resolveInitialDeliveryUserId(): ?int
+    {
+        static $isNullable = null;
+
+        if ($isNullable === null) {
+            $columnInfo = \DB::selectOne(
+                "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deliveries' AND COLUMN_NAME = 'user_id'"
+            );
+            $isNullable = strtoupper((string) ($columnInfo->IS_NULLABLE ?? 'NO')) === 'YES';
+        }
+
+        if ($isNullable) {
+            return null;
+        }
+
+        return Driver::query()->value('id')
+            ?? User::query()->value('id');
     }
 
     public function preview(Request $request)
@@ -72,6 +97,9 @@ class OrderController extends Controller
                     'items.*.quantity' => 'required|integer|min:1|max:99',
                     'coupon_id' => 'nullable|string|exists:coupons,code',
                     'notes' => 'nullable|string|max:500',
+                    'address' => 'nullable|string|max:255',
+                    'destination_lat' => 'nullable|numeric',
+                    'destination_lng' => 'nullable|numeric',
                 ]);
                 $customerId = $request->user()->id;
 
@@ -88,6 +116,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $customerId,
                     'status' => 'Pending',
+                    'type' => 'delivery',
                     'subtotal' => $calculation['subtotal'],
                     'discount' => $calculation['discount_amount'],
                     'delivery_fee' => $calculation['delivery_fee'],
@@ -117,6 +146,19 @@ class OrderController extends Controller
                         ]);
                     }
                 }
+
+                Delivery::firstOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'address' => $validated['address'] ?? 'Dirección pendiente',
+                        'destination_lat' => $validated['destination_lat'] ?? null,
+                        'destination_lng' => $validated['destination_lng'] ?? null,
+                        'status' => 'pending',
+                        'notes' => $validated['notes'] ?? null,
+                        'total' => $order->total,
+                    ]
+                );
 
                 $paymentIntent = PaymentIntent::create([
                     'amount' => (int) ($order->total * 100),
@@ -249,6 +291,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'customer_id' => $request->user()->id,
                     'status' => 'Pending',
+                    'type' => 'delivery',
                     'subtotal' => $calculation['subtotal'],
                     'discount' => $calculation['discount_amount'],
                     'delivery_fee' => $calculation['delivery_fee'],
@@ -267,6 +310,17 @@ class OrderController extends Controller
                         'subtotal' => $product->price * $item['quantity'],
                     ]);
                 }
+
+                Delivery::firstOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'address' => 'Dirección pendiente',
+                        'status' => 'pending',
+                        'notes' => null,
+                        'total' => $order->total,
+                    ]
+                );
 
                 return $order;
             });

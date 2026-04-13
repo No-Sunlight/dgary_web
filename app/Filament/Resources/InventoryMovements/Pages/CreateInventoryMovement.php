@@ -5,7 +5,7 @@ namespace App\Filament\Resources\InventoryMovements\Pages;
 use App\Filament\Resources\InventoryMovements\InventoryMovementResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\Product;
-use App\Models\supply;
+use App\Models\Supply;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
