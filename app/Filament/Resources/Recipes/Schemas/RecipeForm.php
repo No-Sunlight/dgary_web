@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Recipes\Schemas;
 
 use App\Models\Product;
-use App\Models\supply;
+use App\Models\Supply;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -23,17 +23,16 @@ class RecipeForm
                     Step::make('Tipo de receta: ')
                         ->schema([
                             Select::make('product_id')
-                                ->label("Producto a generar:")
-                                ->options(Product::all()->pluck('name', 'id'))
+                                ->label('Producto a generar')
+                                ->options(Product::query()->pluck('name', 'id'))
+                                ->searchable()
                                 ->required(),
                             Textarea::make('description')
                                 ->label("Descripción")
                                 ->required(),
                             TextInput::make('produced_quantity')
-                                ->label('Cantidad')
+                                ->label('Cantidad que produce la receta')
                                 ->required()
-                                ->label("Cantidad a generar (aprox)")
-                                //->prefix("Unida")
                                 ->numeric(),
                         ]),
                     Step::make('Ingredientes')
@@ -43,7 +42,7 @@ class RecipeForm
                                 ->schema([
                                     Select::make('supply_id')
                                         ->label('Insumo')
-                                        ->options(supply::all()->pluck('name', 'id'))
+                                        ->options(Supply::all()->pluck('name', 'id'))
                                         ->required(),
                                     TextInput::make('amount')
                                         ->label('Cantidad')
