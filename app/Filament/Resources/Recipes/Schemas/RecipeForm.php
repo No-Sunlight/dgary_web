@@ -23,16 +23,17 @@ class RecipeForm
                     Step::make('Tipo de receta: ')
                         ->schema([
                             Select::make('product_id')
-                                ->label('Producto a generar')
-                                ->options(Product::query()->pluck('name', 'id'))
-                                ->searchable()
+                                ->label("Producto a generar:")
+                                ->options(Product::all()->pluck('name', 'id'))
                                 ->required(),
                             Textarea::make('description')
                                 ->label("Descripción")
                                 ->required(),
                             TextInput::make('produced_quantity')
-                                ->label('Cantidad que produce la receta')
+                                ->label('Cantidad')
                                 ->required()
+                                ->label("Cantidad a generar (aprox)")
+                                //->prefix("Unida")
                                 ->numeric(),
                         ]),
                     Step::make('Ingredientes')
