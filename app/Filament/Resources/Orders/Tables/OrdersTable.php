@@ -10,8 +10,10 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -69,33 +71,53 @@ class OrdersTable
                         }, $record->id . '.pdf');
                     }),
                     Action::make('view_order')
-                    ->label("View")
-                    ->icon(Heroicon::Eye)
+                        ->label("View")
+                        ->icon(Heroicon::Eye)
 
-                    ->modalSubmitAction(false)
-                    ->schema([ 
-                        Grid::make(2)
-                        ->schema([
-                        TextEntry::make('customer.name')
-                        ->label('Cliente'),
-                        TextEntry::make('cashier.name')
-                        ->label('Recibido por:'),
+                        ->modalSubmitAction(false)
+                        ->schema([ 
+                            Grid::make(2)
+                            ->schema([
+                            TextEntry::make('customer.name')
+                            ->label('Cliente'),
+                            TextEntry::make('cashier.name')
+                            ->label('Recibido por:'),
 
-                        TextEntry::make('total'),
-                        TextEntry::make('discount')
-                        ->columns(2)
-                        ->suffix('%'),
-                        TextEntry::make('subtotal'),
-                        TextEntry::make('products')
-                        ->state(function($record){
-                             $html = '<ul>';
-                        foreach ($record->details as $detail)
-                        {
-                        $product= Product::find($detail->product_id);
-                        $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";}
-                        $html .= '</ul>';
-                        return $html;})
-                        ->html(), ])]), 
+                            TextEntry::make('total'),
+                            TextEntry::make('discount')
+                            ->columns(2)
+                            ->suffix('%'),
+                            TextEntry::make('subtotal'),
+                            TextEntry::make('products')
+                            ->state(function($record){
+                                $html = '<ul>';
+                            foreach ($record->details as $detail)
+                            {
+                            $product= Product::find($detail->product_id);
+                            $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";}
+                            $html .= '</ul>';
+                            return $html;})
+                            ->html(), ])]),
+                     Action::make('cancel_order')
+                                ->label('Cancelar')
+                                ->icon('heroicon-m-x-circle')
+                                ->color('danger')
+                                ->visible(fn (Order $record): bool => $record->status !== 'Canceled')
+                                
+                                ->requiresConfirmation()
+                                ->modalHeading('¿Cancelar pedido?')
+                                ->modalDescription('Esta acción no se puede deshacer y el inventario podría verse afectado.')
+                                ->modalSubmitActionLabel('Sí, cancelar')
+                                ->action(function (Order $record) {
+                                    $record->update([
+                                        'status' => 'Canceled',
+                                    ]);
+
+                                        Notification::make()
+                                        ->title('Pedido cancelado')
+                                        ->success()
+                                        ->send();
+                                }), 
 
                     
 
