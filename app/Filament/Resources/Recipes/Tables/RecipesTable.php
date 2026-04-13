@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Recipes\Tables;
 use App\Models\PreparationLog;
 use App\Models\Product;
 use App\Models\Recipe;
-use App\Models\supply;
+use App\Models\Supply;
 use App\Services\ProductionService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;

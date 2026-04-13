@@ -7,7 +7,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 use App\Models\Product;
-use App\Models\supply;
+use App\Models\Supply;
 
 class InventoryMovementForm
 {
