@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Recipes\Schemas;
 
 use App\Models\Product;
-use App\Models\supply;
+use App\Models\Supply;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -43,7 +43,7 @@ class RecipeForm
                                 ->schema([
                                     Select::make('supply_id')
                                         ->label('Insumo')
-                                        ->options(supply::all()->pluck('name', 'id'))
+                                        ->options(Supply::all()->pluck('name', 'id'))
                                         ->required(),
                                     TextInput::make('amount')
                                         ->label('Cantidad')
