@@ -32,7 +32,7 @@ class CreateOrder extends CreateRecord
         $record = $this->record;
         $orderdetails = OrderDetail::where('order_id', '=', $record->id)->get();
 
-        // 🔹 CLIENTE REGISTRADO
+        // CLIENTE REGISTRADO
         if (!is_null($record->customer_id)) {
 
             $points = 0;

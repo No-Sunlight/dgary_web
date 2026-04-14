@@ -20,6 +20,18 @@ use Filament\Schemas\Schema;
 
 class OrderForm
 {
+
+    private static function calculateSubtotal(?Product $product, $quantity): float
+    {
+        if (!$product || !$quantity)
+            return 0;
+
+        return match ($product->type) {
+            'weight', 'volume' => ($quantity / 1000) * $product->price,
+            default => $quantity * $product->price,
+        };
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -39,12 +51,7 @@ class OrderForm
                                 $set('customer_name', $customer->name);
                                 $set('customer_email', $customer->email);
                             }
-
-
                         })//After validation
-
-
-
                         ->schema([
                             TextInput::make('preview_total')
                                 ->numeric()
@@ -60,49 +67,55 @@ class OrderForm
                                         ->label('Product')
                                         ->searchable()
                                         ->options(Product::all()->pluck('name', 'id'))
-                                        ->preload()
                                         ->reactive()
                                         ->required()
                                         ->afterStateUpdated(function ($state, $get, Set $set) {
-                                            $product_info = product::find($state);
-                                            //$set('product_info',$product_info);
-                                            $set('unit_price', $product_info->price ?? 0);
-                                            if (empty($get('quantity'))) {
-                                                $set('subtotal', 0);
-                                                return;
-                                            }
-                                            $set('subtotal', $get('quantity') * $get('unit_price'));
-                                            $set('product_name', $product_info->name);
-                                            $globalProducts[] = $product_info->name;
+
+                                            $product = Product::find($state);
+                                            $quantity = $get('quantity');
+
+                                            $subtotal = self::calculateSubtotal($product, $quantity);
+
+                                            $set('unit_price', $product->price ?? 0);
+                                            $set('subtotal', round($subtotal, 2));
                                         }),
-                                    TextInput::make('quantity')
-                                        ->numeric()
+                                    Select::make('quantity')
+                                        ->label('Cantidad')
                                         ->required()
-                                        ->live()
-                                        ->dehydrated()
-                                        ->maxValue(
-                                            function ($get) {
-                                                $product = Product::find($get('product_id'));
-                                                return $product->stock;
-                                            }
-                                        )
+                                        ->reactive()
+                                        ->options(function ($get) {
+                                            $product = Product::find($get('product_id'));
 
+                                            if (!$product)
+                                                return [];
 
+                                            return match ($product->type) {
+                                                'weight' => [
+                                                    100 => '100 g - 1 bola',
+                                                    200 => '200 g - 2 bolas',
+                                                    1000 => '1 kg',
+                                                ],
+                                                'volume' => [
+                                                    500 => '500 ml',
+                                                    1000 => '1 litro',
+                                                ],
+                                                default => [
+                                                    1 => '1 pieza',
+                                                    2 => '2 piezas',
+                                                    3 => '3 piezas',
+                                                    4 => '4 piezas',
+                                                    5 => '5 piezas',
+                                                ],
+                                            };
+                                        })
                                         ->afterStateUpdated(function ($state, $set, $get) {
-                                            if (empty($state)) {
-                                                $set('subtotal', 0);
-                                                return;
-                                            }
-                                            //SI ESTO SE ACTIVA SIGNIFICA QUE ESTOY EN UN EDIT Y SOLO QUIERO CAMBIAR EL PRECIO
-                                            if (!empty($get('product_id'))) {
-                                                $set('unit_price', product::find($get('product_id'))?->price ?? 0);
-                                                $set('subtotal', $get('quantity') * $get('unit_price'));
 
+                                            $product = Product::find($get('product_id'));
 
-                                            } else {
-                                                $set('subtotal', $get('quantity') * $get('unit_price'));
-                                            }
+                                            $subtotal = self::calculateSubtotal($product, $state);
 
+                                            $set('unit_price', $product->price ?? 0);
+                                            $set('subtotal', round($subtotal, 2));
                                         }),
                                     TextInput::make('subtotal')
                                         ->numeric()
@@ -116,16 +129,8 @@ class OrderForm
                                     $set('preview_total', $total);
                                     $set('subtotal', $total);
                                 })
-                                ->collapsible()
-
+                                ->collapsible(),
                         ]),
-                    TextInput::make("unit_price")
-                        ->numeric()
-                        ->live()
-                        ->hidden(),
-
-
-
                     //INFORMACION DEL CLIENTE
 //Para este punto ya debería de haberse establecido tanto el cupon, descuento y subtotal. Esta función calcula el total
                     Step::make('Información del cliente')
@@ -149,17 +154,21 @@ class OrderForm
                                     // dd($productName);
                 
                                     //  $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
-                                    $string .= "Producto: {$productName} Cantidad: {$quantity}";
+                                    $product = Product::find($item['product_id']);
+
+                                    $unit = match ($product->type) {
+                                        'weight' => 'g',
+                                        'volume' => 'ml',
+                                        default => 'pz',
+                                    };
+
+                                    $string .= "Producto: {$productName} Cantidad: {$quantity} {$unit} ";
                                 }
                                 //$html .= '</ul>';
                 
                                 return $string;
                             });
-
-
                             //Populate las ordenes
-                
-
                         })//After validation
 
 
@@ -278,22 +287,12 @@ class OrderForm
                             TextInput::make('change_due')
                                 ->dehydrated(false)
                                 ->readOnly(),
-
-
                             TextInput::make('orden')
                                 ->dehydrated(false)
                                 ->readOnly(),
                         ])
-
-
-
                 ]) //MAIN WIZARD 
                     ->columnSpanFull()
-
             ]);
-
     }
-
-
-
 }
