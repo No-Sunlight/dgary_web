@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Delivery;
-use App\Models\Driver;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Payment;
 use App\Models\Product;
-use App\Models\User;
 use App\Services\OrderCalculationService;
 use App\Services\OrderValidationService;
 use Illuminate\Http\Request;
@@ -24,28 +22,6 @@ class OrderController extends Controller
         private OrderValidationService $validationService
     ) {
         Stripe::setApiKey(config('services.stripe.secret'));
-    }
-
-    /**
-     * Permite operar en entornos donde deliveries.user_id siga como NOT NULL.
-     */
-    private function resolveInitialDeliveryUserId(): ?int
-    {
-        static $isNullable = null;
-
-        if ($isNullable === null) {
-            $columnInfo = \DB::selectOne(
-                "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deliveries' AND COLUMN_NAME = 'user_id'"
-            );
-            $isNullable = strtoupper((string) ($columnInfo->IS_NULLABLE ?? 'NO')) === 'YES';
-        }
-
-        if ($isNullable) {
-            return null;
-        }
-
-        return Driver::query()->value('id')
-            ?? User::query()->value('id');
     }
 
     public function preview(Request $request)
@@ -150,7 +126,7 @@ class OrderController extends Controller
                 Delivery::firstOrCreate(
                     ['order_id' => $order->id],
                     [
-                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'user_id' => null,
                         'address' => $validated['address'] ?? 'Dirección pendiente',
                         'destination_lat' => $validated['destination_lat'] ?? null,
                         'destination_lng' => $validated['destination_lng'] ?? null,
@@ -314,7 +290,7 @@ class OrderController extends Controller
                 Delivery::firstOrCreate(
                     ['order_id' => $order->id],
                     [
-                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'user_id' => null,
                         'address' => 'Dirección pendiente',
                         'status' => 'pending',
                         'notes' => null,
