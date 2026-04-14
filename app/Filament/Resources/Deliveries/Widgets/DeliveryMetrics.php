@@ -12,7 +12,7 @@ class DeliveryMetrics extends StatsOverviewWidget
     protected function getStats(): array
     {
         $pending_orders = Delivery::where('status','pending')->count();
-        $unasigned_driver = Delivery::where('status','ready')->count();
+        $unasigned_driver = Delivery::where('user_id',null)->count();
         $in_trasint = Delivery::where('status','in_transit')->count();
 
         return [

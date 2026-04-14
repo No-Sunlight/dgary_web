@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Delivery;
-use App\Models\Driver;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Payment;
 use App\Models\Product;
-use App\Models\User;
 use App\Services\OrderCalculationService;
 use App\Services\OrderValidationService;
 use Illuminate\Http\Request;
@@ -26,28 +24,6 @@ class OrderController extends Controller
         Stripe::setApiKey(config('services.stripe.secret'));
     }
 
-    /**
-     * Permite operar en entornos donde deliveries.user_id siga como NOT NULL.
-     */
-    private function resolveInitialDeliveryUserId(): ?int
-    {
-        static $isNullable = null;
-
-        if ($isNullable === null) {
-            $columnInfo = \DB::selectOne(
-                "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deliveries' AND COLUMN_NAME = 'user_id'"
-            );
-            $isNullable = strtoupper((string) ($columnInfo->IS_NULLABLE ?? 'NO')) === 'YES';
-        }
-
-        if ($isNullable) {
-            return null;
-        }
-
-        return Driver::query()->value('id')
-            ?? User::query()->value('id');
-    }
-
     public function preview(Request $request)
     {
         try {
@@ -55,7 +31,7 @@ class OrderController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
                 'items.*.quantity' => 'required|integer|min:1|max:99',
-                'coupon_id' => 'nullable|string|exists:coupons,code',
+                'coupon_id' => 'nullable',
             ]);
 
             $this->validationService->validateItems($validated['items']);
@@ -95,7 +71,7 @@ class OrderController extends Controller
                     'items' => 'required|array|min:1',
                     'items.*.product_id' => 'required|integer|exists:products,id',
                     'items.*.quantity' => 'required|integer|min:1|max:99',
-                    'coupon_id' => 'nullable|string|exists:coupons,code',
+                    'coupon_id' => 'nullable',
                     'notes' => 'nullable|string|max:500',
                     'address' => 'nullable|string|max:255',
                     'destination_lat' => 'nullable|numeric',
@@ -138,19 +114,33 @@ class OrderController extends Controller
                 }
 
                 if (($validated['coupon_id'] ?? null) !== null) {
-                    $coupon = Coupon::where('code', $validated['coupon_id'])->first();
+                    $couponReference = (string) $validated['coupon_id'];
+
+                    $coupon = Coupon::query()
+                        ->active()
+                        ->when(
+                            ctype_digit($couponReference),
+                            fn ($query) => $query->where('id', (int) $couponReference),
+                            fn ($query) => $query->where('code', $couponReference)
+                        )
+                        ->first();
+
                     if ($coupon) {
                         $coupon->customers()->attach($customerId, [
                             'order_id' => $order->id,
                             'used_at' => now(),
                         ]);
+
+                        if (!is_null($coupon->used_count)) {
+                            $coupon->increment('used_count');
+                        }
                     }
                 }
 
                 Delivery::firstOrCreate(
                     ['order_id' => $order->id],
                     [
-                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'user_id' => null,
                         'address' => $validated['address'] ?? 'Dirección pendiente',
                         'destination_lat' => $validated['destination_lat'] ?? null,
                         'destination_lng' => $validated['destination_lng'] ?? null,
@@ -314,7 +304,7 @@ class OrderController extends Controller
                 Delivery::firstOrCreate(
                     ['order_id' => $order->id],
                     [
-                        'user_id' => $this->resolveInitialDeliveryUserId(),
+                        'user_id' => null,
                         'address' => 'Dirección pendiente',
                         'status' => 'pending',
                         'notes' => null,

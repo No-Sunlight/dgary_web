@@ -14,7 +14,6 @@ class StatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        // 1. Filter Orders by the current month
         $ordersThisMonth = Order::whereBetween('created_at', [
             now()->startOfMonth(),
             now()->endOfMonth(),

@@ -12,7 +12,7 @@ class CouponValidateRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'coupon_id' => ['required', 'integer', 'exists:customer_coupons,id'],
+            'coupon_id' => ['required', 'string'],
             'subtotal' => ['required', 'numeric', 'min:0'],
         ];
     }

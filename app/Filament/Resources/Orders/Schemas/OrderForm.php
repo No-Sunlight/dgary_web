@@ -121,9 +121,68 @@ class OrderForm
                         ->hidden(),
                     //INFORMACION DEL CLIENTE
 //Para este punto ya debería de haberse establecido tanto el cupon, descuento y subtotal. Esta función calcula el total
+<<<<<<< HEAD
                     Step::make('Información del cliente')
                         ->afterValidation(function ($set, $get) {
                             //Dios bendiga a aftervalidation
+=======
+Step::make('Información del cliente')
+        ->afterValidation(function ($set,$get) {
+        //Dios bendiga a aftervalidation
+            
+            $subtotal=$get('subtotal');
+                $set('total', number_format($subtotal-(float) $get('discount'),2,'.'));
+
+            //Obtener información de la orden
+            $set('orden',   function ($get) {
+                $details = $get('details');
+
+            // dd($details);
+               // $html = '<ul>';
+               $string ="";
+                foreach ($details as $item) {
+                    $productName = Product::find($item['product_id'])->name;
+                    $quantity = $item['quantity'] ?? 0;
+
+                // dd($productName);
+                    
+                  //  $html .= "<li>Producto: {$productName} Cantidad: {$quantity}</li>";
+                   $string.= "Producto: {$productName} Cantidad: {$quantity} \n";
+                }
+                //$html .= '</ul>';
+
+                return $string;
+                });
+
+
+//Populate las ordenes
+
+
+    })//After validation
+
+
+        ->schema([
+                Select::make('customer_id')
+                    ->label('Customer')
+                    ->searchable()
+                    ->live()
+                    ->disabledOn('edit')
+                    ->options(function ():
+                    array{
+                    return Customer::query()->pluck('phone', 'id')->all();})
+                    ->afterStateUpdated(function ($state, $get, $set) 
+                    {
+                        $customer=Customer::find($state);
+                        $set('selected_customer', $state);
+                        if(empty($state)){
+                                $set('selected_customer', 0);
+                                 return;
+                        }else{
+                            $set('customer_name', $customer->name );
+                            $set('customer_email', $customer->email);
+                            return;
+                        }
+>>>>>>> 8380424617cc494c900dd21e1a6f793bb65246fc
                 
                             $subtotal = $get('subtotal');
                             $set('total', number_format($subtotal - $subtotal * $get('discount') / 100, 2, '.'));
@@ -132,12 +191,40 @@ class OrderForm
                             $set('orden', function ($get) {
                                 $details = $get('details');
 
+<<<<<<< HEAD
                                 // dd($details);
                                 // $html = '<ul>';
                                 $string = "";
                                 foreach ($details as $item) {
                                     $productName = Product::find($item['product_id'])->name;
                                     $quantity = $item['quantity'] ?? 0;
+=======
+                    foreach ($coupons as $coupon) {
+                            $array[$coupon->id]=$coupon->coupons->name;}
+                        return $array;
+                        
+                    //Customer_id no esta vacio, lo que indica que fue activado por el view.    
+                    }if(!empty($get('customer_id'))){
+                            $coupons = CustomerCoupon::with('coupons')->where("customer_id","=",$get('customer_id'))->get();
+                        foreach ($coupons as $coupon) {
+                            $array[$coupon->id]=$coupon->coupons->name;}
+                        return $array;
+                }else{
+                    return $array;
+                    }})
+                    ->afterStateUpdated(
+                        function($set,$state,$get){
+                            if($state>0){
+                         $discount =CustomerCoupon::find($state)?->discount ?? 0;
+                         $set('discount',$discount);  
+                        // $set('total', $get('subtotal') - $discount );
+                            }
+                            //Creo que me puedo ahorrar el if else, si pongo el valor default del discount a cero
+                            else{
+                                $set('discount',0);
+                            }
+                        }),
+>>>>>>> 8380424617cc494c900dd21e1a6f793bb65246fc
 
                                     // dd($productName);
                 
@@ -195,6 +282,7 @@ class OrderForm
                                         }
                                         return $array;
 
+<<<<<<< HEAD
                                         //Customer_id no esta vacio, lo que indica que fue activado por el view.    
                                     }if (!empty($get('customer_id'))) {
                                         $coupons = CustomerCoupon::with('coupons')->where("customer_id", "=", $get('customer_id'))->get();
@@ -244,6 +332,59 @@ class OrderForm
                                 ->afterStateUpdated(function ($get, $set, $state) {
                                     $total = (float) $get('total');
                                     $paid = (float) $state;
+=======
+        ]),//Información
+
+
+ Step::make("Confirmar pago")
+
+        ->schema([
+            //Aqui estamos confirmando que el cliente quiere hacer la compra, 
+            //aunque la verdad sigo pensando que primero deberiamos de pregunta al cliente si quiere registrar sus puntos 
+        TextInput::make('subtotal')
+        ->readOnly(),
+        TextInput::make("discount")
+        ->prefix('$')
+        ->default(0)
+        ->readOnly(),
+        TextInput::make('total')
+        ->readOnly(),
+
+    //Esto para calcular el cambio
+    TextInput::make('amount_paid')
+    ->label('Recibido')
+    ->numeric()
+    ->prefix('$')
+    ->required()
+    ->live(onBlur: true) 
+    ->dehydrated(false)
+    ->minValue(fn ( $get) => (float) $get('total')) 
+    ->afterStateUpdated(function ( $get, $set, $state) {
+        $total = (float) $get('total');
+        $paid = (float) $state;
+
+        if ($paid >= $total) {
+            $change = $paid - $total;
+            $set('change_due', number_format($change, 2, '.'));
+        } else {
+            $set('change_due', 'Incompleto');
+        }
+    }),
+    TextInput::make('change_due')
+    ->dehydrated(false)
+    ->readOnly(),
+
+
+    TextInput::make('orden')
+    ->dehydrated(false)
+    ->readOnly(),
+        ])
+
+
+
+        ]) //MAIN WIZARD 
+           ->columnSpanFull()
+>>>>>>> 8380424617cc494c900dd21e1a6f793bb65246fc
 
                                     if ($paid >= $total) {
                                         $change = $paid - $total;

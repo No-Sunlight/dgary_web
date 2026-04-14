@@ -29,12 +29,25 @@ class DriverDeliveryResource extends JsonResource
                 'lng' => $this->driver_lng,
                 'updated_at' => optional($this->driver_location_updated_at)?->toIso8601String(),
             ],
+            'productos' => $this->mapProductos(),
             'total' => floatval($this->total),
             'estado' => $this->mapStatus($this->status),
             'metodo_pago' => $this->order->payment_method ?? 'No especificado',
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
+    }
+
+    private function mapProductos(): array
+    {
+        return $this->order->details->map(function ($detail) {
+            return [
+                'producto' => $detail->product->name ?? 'Producto desconocido',
+                'cantidad' => $detail->quantity ?? 1,
+                'precio' => floatval($detail->product->price ?? 0),
+                'subtotal' => floatval(($detail->product->price ?? 0) * ($detail->quantity ?? 1)),
+            ];
+        })->all();
     }
 
     private function mapStatus(string $status): string

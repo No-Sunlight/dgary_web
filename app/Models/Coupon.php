@@ -11,7 +11,7 @@ class Coupon extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'status' => 'boolean',
         'expires_at' => 'datetime',
     ];
 
@@ -29,7 +29,7 @@ class Coupon extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
+        return $query->where('status', true)
             ->where(function ($q) {
                 $q->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
