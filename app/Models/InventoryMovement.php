@@ -16,6 +16,13 @@ class InventoryMovement extends Model
         'reason'
     ];
 
+    //Le agregue esta relación para la imprimir el pdf 
+
+    public function production()
+{
+    return $this->belongsTo(Production::class, 'production_id');
+}
+
     public function supply()
     {
         return $this->belongsTo(Supply::class);
