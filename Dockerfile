@@ -41,5 +41,8 @@ RUN php artisan cache:clear || true && \
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
     chmod -R 775 /app/storage /app/bootstrap/cache
 
+#LIMITE DE ARCHIVOS SUBIDOS
+RUN printf "upload_max_filesize=32M\npost_max_size=32M\nmemory_limit=256M" > /usr/local/etc/php/conf.d/zz-custom-limits.ini
+
 EXPOSE 8000
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
