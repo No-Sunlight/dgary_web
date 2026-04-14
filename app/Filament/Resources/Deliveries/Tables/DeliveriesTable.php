@@ -84,14 +84,6 @@ class DeliveriesTable
                                 return $array;
                             })
                     ])
-<<<<<<< HEAD
-=======
-                    ->action(function($data,Model $record)
-                        {                        
-                        
-                        $record->user_id=$data['driver'];
-                        $record->save();
->>>>>>> 8380424617cc494c900dd21e1a6f793bb65246fc
 
                     ->action(function (Model $record, array $data) {
 
