@@ -21,7 +21,7 @@ class CouponsTable
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('points_price')
-                    ->money()
+                    ->numeric()
                     ->sortable(),
                 IconColumn::make('status')
                     ->boolean(),

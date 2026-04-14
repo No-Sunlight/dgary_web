@@ -132,7 +132,6 @@ class DeliveriesTable
                         {                        
                         
                         $record->user_id=$data['driver'];
-                        $record->status='in_transit';
                         $record->save();
 
                         }
