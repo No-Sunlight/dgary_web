@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
-use App\Models\ProductStock;
+use App\Models\InventoryMovement;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -28,9 +28,8 @@ class OrderService
             foreach ($items as $item) {
 
                 $product = Product::findOrFail($item['product_id']);
-                $stock = ProductStock::where('product_id', $product->id)->first();
 
-                if (!$stock || $stock->stock < $item['quantity']) {
+                if ($product->stock < $item['quantity']) {
                     throw new Exception("Stock insuficiente de {$product->name}");
                 }
 
@@ -44,7 +43,19 @@ class OrderService
                     'subtotal' => $subtotal,
                 ]);
 
-                $stock->decrement('stock', $item['quantity']);
+                // Descontar stock
+                $product->decrement('stock', $item['quantity']);
+
+                // GENERAR MOVIMIENTO SOLO PARA CAJA
+                if ($order->type === 'in_store') {
+                    InventoryMovement::create([
+                        'type' => 'sale',
+                        'product_id' => $product->id,
+                        'quantity' => $item['quantity'],
+                        'direction' => 'out',
+                        'reason' => 'Venta en caja (Order #' . $order->id . ')',
+                    ]);
+                }
 
                 $total += $subtotal;
             }

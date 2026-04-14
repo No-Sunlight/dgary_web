@@ -5,8 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Delivery;
-
 class Order extends Model
 {
     protected $guarded = [];
@@ -21,6 +19,16 @@ class Order extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $fillable = [
+        'user_id',
+        'customer_id',
+        'subtotal',
+        'total',
+        'status',
+        'type',
+        'discount',
+    ];
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
@@ -33,7 +41,7 @@ class Order extends Model
 
     public function deliveries(): HasMany
     {
-        return $this->hasMany(Order::class,'order_id');
+        return $this->hasMany(Order::class, 'order_id');
     }
 
     public function payments(): HasMany

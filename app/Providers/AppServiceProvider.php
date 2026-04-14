@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
-use App\Models\OrderDetail;
+use App\Models\Delivery;
 use App\Models\Product;
-use App\Observers\DetailObserver;
 use App\Observers\ProductObserver;
+use App\Observers\DeliveryObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +28,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Product::observe(ProductObserver::class);
-      //  OrderDetail::observe(DetailObserver::class);
+        Delivery::observe(DeliveryObserver::class);
+
+        //  OrderDetail::observe(DetailObserver::class);
         $this->configureDefaults();
 
 
@@ -42,7 +44,8 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
+        Password::defaults(
+            fn(): ?Password => app()->isProduction()
             ? Password::min(12)
                 ->mixedCase()
                 ->letters()

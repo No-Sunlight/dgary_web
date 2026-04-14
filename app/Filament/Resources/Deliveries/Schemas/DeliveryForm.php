@@ -13,7 +13,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use League\CommonMark\Renderer\Inline\TextRenderer;
 use PhpParser\Node\Stmt\Label;
 
 class DeliveryForm
@@ -21,60 +20,65 @@ class DeliveryForm
     public static function configure(Schema $schema): Schema
     {
 
-    //Esta parte se va a quedar simplemente para mostrar detalles. Para la accion view
-    //Pienso sobreescribir el formDelivery. 
+        //Esta parte se va a quedar simplemente para mostrar detalles. Para la accion view
+        //Pienso sobreescribir el formDelivery. 
         return $schema
-                      
+
             ->components([
                 Select::make('user_id')
-             ->required()
-                ->label("Repartidor")
-                ->options(Driver::all()->pluck('name', 'id')),
+                    ->required()
+                    ->label("Repartidor")
+                    ->options(Driver::all()->pluck('name', 'id')),
 
-
-            TextEntry::make('client')
-            ->label("Cliente")
-            ->state(function(Model $record,$set)//Nota personal. La variable siempre se tiene que definir commo $record para acceder al registro
-            {
-                $order = Order::with('details')->find($record->order_id);
-                $customer = Customer::find($order->customer_id);
-                $html = '<ul>';
-                foreach ($order->details as $detail)
+                TextEntry::make('client')
+                    ->label("Cliente")
+                    ->state(function (Model $record, $set)//Nota personal. La variable siempre se tiene que definir commo $record para acceder al registro
                     {
-                    $product= Product::find($detail->product_id);
-                    $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>"; }
-                $html .= '</ul>';
-                 $set('phone',$customer->phone);
-                 $set('details',$html);
+                        $order = Order::with('details')->find($record->order_id);
+                        $customer = Customer::find($order->customer_id);
+                        $html = '<ul>';
+                        foreach ($order->details as $detail) {
+                            $product = Product::find($detail->product_id);
+                            $html .= "<li>Nombre: {$product->name} Cantidad: {$detail->quantity}</li>";
+                        }
+                        $html .= '</ul>';
 
-                return $customer->name;}),
-            
-            TextEntry::make('phone')
-                ->label("Telefono"),
-            TextInput::make('address')
+                        $set('phone', $customer->phone);
+                        $set('details', $html);
+
+                        return $customer->name;
+
+                    }),
+
+                TextEntry::make('phone')
+                    ->label("Telefono"),
+
+
+
+                TextInput::make('address')
                     ->label("Dirección")
                     ->disabled()
                     ->required(),
-        Select::make('status')
-            ->label("Estatus")
+                Select::make('status')
+                    ->label("Estatus")
                     ->options([
-            'pending' => 'Pending',
-            'ready' => 'Ready',
-            'completed' => 'Completed',
-            'canceled' => 'Canceled',
-            'in_transit'=> 'In Transit'
-        ])
-                ->disabled()
-                ->required(),
+                        'pending' => 'Pending',
+                        'ready' => 'Ready',
+                        'completed' => 'Completed',
+                        'canceled' => 'Canceled',
+                        'in_transit' => 'In Transit'
+                    ])
+                    ->disabled()
+                    ->required(),
                 TextInput::make('total')
                     ->required()
-                     ->disabled()
-                     ->prefix("$")
+                    ->disabled()
+                    ->prefix("$")
                     ->numeric(),
 
-            TextEntry::make('details')
-            ->label('Productos: ')
-            ->html(),
+                TextEntry::make('details')
+                    ->label('Productos: ')
+                    ->html(),
 
             ]);
     }

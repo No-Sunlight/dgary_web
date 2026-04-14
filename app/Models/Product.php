@@ -14,16 +14,17 @@ class Product extends Model
     use SoftDeletes;
 
     protected $fillable = [
-    'name',
-    'image',
-    'category_id',
-    'price',
-    'stock',
-    'points',
-    'type',
-    'expire',
-    'status',
-];
+        'name',
+        'image',
+        'category_id',
+        'price',
+        'stock',
+        'points',
+        'type',
+        'expire',
+        'status',
+    ];
+    
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
@@ -34,7 +35,7 @@ class Product extends Model
         return $this->hasMany(ProductRecipe::class);
     }
 
-     public function stock()
+    public function stock()
     {
         return $this->hasOne(ProductStock::class);
     }
