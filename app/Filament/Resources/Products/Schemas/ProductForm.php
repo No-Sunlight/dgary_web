@@ -19,19 +19,20 @@ class ProductForm
                 TextInput::make('name')
                     ->default(null),
                 Select::make('category_id')
-                ->label("Categoria")
-                 ->options(function ():
-                    array{
-                    return Category::query()->pluck('name', 'id')->all();})
+                    ->label("Categoria")
+                    ->options(function ():
+                                    array {
+                        return Category::query()->pluck('name', 'id')->all();
+                    })
                     ->required(),
                 FileUpload::make('image')
-                ->image()
-                ->columnSpanFull()
-                ->directory('images')
-                ->disk('public')
-                ->imageEditor()
-                ->label("Imagen")
-                ->required(),
+                    ->image()
+                    ->columnSpanFull()
+                    ->directory('images')
+                    ->disk('public')
+                    ->imageEditor()
+                    ->label("Imagen")
+                    ->required(),
                 TextInput::make('price')
                     ->numeric()
                     ->default(null)
@@ -41,8 +42,16 @@ class ProductForm
                     ->default(null),
                 TextInput::make('stock')
                     ->numeric()
-                    ->prefix("Litros/Kilos/Existencias")
                     ->default(null),
+                Select::make('type')
+                    ->label('Tipo de producto')
+                    ->options([
+                        'unit' => 'Por pieza',
+                        'weight' => 'Por peso (gramos)',
+                        'volume' => 'Por volumen (ml)',
+                    ])
+                    ->default('unit')
+                    ->required(),
             ]);
     }
 }
