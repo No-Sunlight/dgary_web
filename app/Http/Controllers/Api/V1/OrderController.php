@@ -31,7 +31,7 @@ class OrderController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
                 'items.*.quantity' => 'required|integer|min:1|max:99',
-                'coupon_id' => 'nullable|string|exists:coupons,code',
+                'coupon_id' => 'nullable',
             ]);
 
             $this->validationService->validateItems($validated['items']);
@@ -71,7 +71,7 @@ class OrderController extends Controller
                     'items' => 'required|array|min:1',
                     'items.*.product_id' => 'required|integer|exists:products,id',
                     'items.*.quantity' => 'required|integer|min:1|max:99',
-                    'coupon_id' => 'nullable|string|exists:coupons,code',
+                    'coupon_id' => 'nullable',
                     'notes' => 'nullable|string|max:500',
                     'address' => 'nullable|string|max:255',
                     'destination_lat' => 'nullable|numeric',
@@ -114,12 +114,26 @@ class OrderController extends Controller
                 }
 
                 if (($validated['coupon_id'] ?? null) !== null) {
-                    $coupon = Coupon::where('code', $validated['coupon_id'])->first();
+                    $couponReference = (string) $validated['coupon_id'];
+
+                    $coupon = Coupon::query()
+                        ->active()
+                        ->when(
+                            ctype_digit($couponReference),
+                            fn ($query) => $query->where('id', (int) $couponReference),
+                            fn ($query) => $query->where('code', $couponReference)
+                        )
+                        ->first();
+
                     if ($coupon) {
                         $coupon->customers()->attach($customerId, [
                             'order_id' => $order->id,
                             'used_at' => now(),
                         ]);
+
+                        if (!is_null($coupon->used_count)) {
+                            $coupon->increment('used_count');
+                        }
                     }
                 }
 

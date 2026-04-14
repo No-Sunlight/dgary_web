@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CouponValidateRequest;
-use App\Http\Resources\Api\V1\CouponResource;
+use App\Http\Resources\Api\V1\CouponCatalogResource;
 use App\Http\Resources\Api\V1\CouponValidationResource;
-use App\Models\CustomerCoupon;
+use App\Models\Coupon;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller
@@ -16,14 +16,14 @@ class CouponController extends Controller
      */
     public function index(Request $request)
     {
-        $coupons = CustomerCoupon::where('customer_id', $request->user()->id)
-            ->where('status', 1)
-            ->with('coupons')
+        $coupons = Coupon::query()
+            ->active()
+            ->orderBy('points_price')
             ->get();
 
         return response()->json([
             'success' => true,
-            'data' => CouponResource::collection($coupons),
+            'data' => CouponCatalogResource::collection($coupons),
             'message' => 'Cupones disponibles',
         ], 200);
     }
@@ -33,9 +33,9 @@ class CouponController extends Controller
      */
     public function show($id, Request $request)
     {
-        $coupon = CustomerCoupon::where('id', $id)
-            ->where('customer_id', $request->user()->id)
-            ->with('coupons')
+        $coupon = Coupon::query()
+            ->active()
+            ->where('id', $id)
             ->first();
 
         if (!$coupon) {
@@ -49,7 +49,7 @@ class CouponController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => new CouponResource($coupon),
+            'data' => new CouponCatalogResource($coupon),
             'message' => 'Cupón obtenido',
         ], 200);
     }
@@ -61,10 +61,14 @@ class CouponController extends Controller
     {
         $validated = $request->validated();
 
-        $coupon = CustomerCoupon::where('id', $validated['coupon_id'])
-            ->where('customer_id', $request->user()->id)
-            ->where('status', 1)
-            ->with('coupons')
+        $couponReference = (string) $validated['coupon_id'];
+        $coupon = Coupon::query()
+            ->active()
+            ->when(
+                ctype_digit($couponReference),
+                fn ($query) => $query->where('id', (int) $couponReference),
+                fn ($query) => $query->where('code', $couponReference)
+            )
             ->first();
 
         if (!$coupon) {
@@ -72,21 +76,20 @@ class CouponController extends Controller
                 'success' => false,
                 'data' => null,
                 'message' => 'Cupón no disponible',
-                'errors' => ['coupon_id' => ['El cupón no pertenece al cliente o ya fue utilizado']],
+                'errors' => ['coupon_id' => ['El cupón no es válido o no está activo']],
             ], 404);
         }
 
         $subtotal = (float) $validated['subtotal'];
-        $discountPercent = (int) $coupon->discount;
-        $discountAmount = round(($subtotal * $discountPercent) / 100, 2);
+        $discountAmount = round(min($subtotal, (float) $coupon->discount), 2);
         $total = max(round($subtotal - $discountAmount, 2), 0);
 
         return response()->json([
             'success' => true,
             'data' => new CouponValidationResource([
                 'coupon_id' => $coupon->id,
-                'coupon_name' => $coupon->coupons?->name,
-                'discount_percent' => $discountPercent,
+                'coupon_name' => $coupon->name,
+                'discount_percent' => 0,
                 'subtotal' => $subtotal,
                 'discount_amount' => $discountAmount,
                 'total' => $total,

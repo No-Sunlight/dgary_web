@@ -33,9 +33,9 @@ class OrderCalculationService
             ];
         }
 
-        $coupon = Coupon::where('code', $couponCode)->active()->first();
-        
-        if (!$coupon) {
+        $discountData = $this->resolveCouponDiscount($couponCode);
+
+        if ($discountData === null) {
             return [
                 'amount' => 0,
                 'percent' => 0,
@@ -43,16 +43,38 @@ class OrderCalculationService
             ];
         }
 
-        $discountAmount = round(($subtotal * $coupon->discount_percent) / 100, 2);
+        $discountAmount = round(min($subtotal, $discountData['amount']), 2);
 
         return [
             'amount' => $discountAmount,
-            'percent' => $coupon->discount_percent,
+            'percent' => 0,
             'coupon_info' => [
-                'code' => $coupon->code,
-                'description' => $coupon->description,
+                'code' => $discountData['code'],
+                'description' => $discountData['description'],
                 'applied_discount' => $discountAmount,
             ],
+        ];
+    }
+
+    private function resolveCouponDiscount(string $couponReference): ?array
+    {
+        $coupon = Coupon::query()
+            ->active()
+            ->when(
+                ctype_digit($couponReference),
+                fn ($query) => $query->where('id', (int) $couponReference),
+                fn ($query) => $query->where('code', $couponReference)
+            )
+            ->first();
+
+        if (!$coupon) {
+            return null;
+        }
+
+        return [
+            'code' => $coupon->code ?: (string) $coupon->id,
+            'amount' => (float) $coupon->discount,
+            'description' => $coupon->description ?: $coupon->name,
         ];
     }
 

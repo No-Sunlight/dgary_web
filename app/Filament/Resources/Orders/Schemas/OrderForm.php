@@ -132,7 +132,7 @@ Step::make('Información del cliente')
         //Dios bendiga a aftervalidation
             
             $subtotal=$get('subtotal');
-            $set('total', number_format($subtotal-$subtotal*$get('discount')/100,2,'.'));
+                $set('total', number_format($subtotal-(float) $get('discount'),2,'.'));
 
             //Obtener información de la orden
             $set('orden',   function ($get) {
@@ -222,7 +222,7 @@ Step::make('Información del cliente')
                             if($state>0){
                          $discount =CustomerCoupon::find($state)?->discount ?? 0;
                          $set('discount',$discount);  
-                        // $set('total', ($discount/100)*$get('subtotal') );
+                        // $set('total', $get('subtotal') - $discount );
                             }
                             //Creo que me puedo ahorrar el if else, si pongo el valor default del discount a cero
                             else{
@@ -244,7 +244,7 @@ Step::make('Información del cliente')
         TextInput::make('subtotal')
         ->readOnly(),
         TextInput::make("discount")
-        ->prefix('%')
+        ->prefix('$')
         ->default(0)
         ->readOnly(),
         TextInput::make('total')

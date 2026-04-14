@@ -17,7 +17,7 @@ class OrderCreateRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1|max:99',
-            'coupon_id' => 'nullable|string|exists:coupons,code',
+            'coupon_id' => 'nullable',
             'notes' => 'nullable|string|max:500',
         ];
     }

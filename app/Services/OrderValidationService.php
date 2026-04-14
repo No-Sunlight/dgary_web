@@ -44,7 +44,14 @@ class OrderValidationService
             return null;
         }
 
-        $coupon = Coupon::where('code', $couponCode)->active()->first();
+        $coupon = Coupon::query()
+            ->active()
+            ->when(
+                ctype_digit($couponCode),
+                fn ($query) => $query->where('id', (int) $couponCode),
+                fn ($query) => $query->where('code', $couponCode)
+            )
+            ->first();
 
         if (!$coupon) {
             throw ValidationException::withMessages([
